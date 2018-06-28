@@ -1,0 +1,17 @@
+(defun switch-pyvenv (env)
+  (interactive "spyvenv: ")
+  (setq lenv (split-string env))
+  (setq conda (pop lenv))
+  (if (equal conda "conda")
+      (progn
+        (setq pyvenv-base-dir conda-envs-directory)
+        (setq env (pop lenv))
+        (setq pscomm "console --simple-prompt --kernel "))
+    (progn
+      (setq pyvenv-base-dir "/home/arno/Documents/code/")
+      (setq env conda)
+      (setq pscomm "console --kernel ")))
+  (pyvenv-activate (concat pyvenv-base-dir env))
+  ;; (setenv "MPLBACKEND" "module://Qt5Agg")
+  (setq python-shell-interpreter-args (concat pscomm env))
+  )
