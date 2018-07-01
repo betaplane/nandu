@@ -25,7 +25,19 @@
       ))
 
 (with-eval-after-load 'company
-	(add-to-list 'company-backends 'company-ob-ipython))
+  (global-company-mode t)
+	(add-to-list 'company-backends 'company-ob-ipython)
+  )
+
+;; apparently locate-library only works after loading of elpy
+;; the form `(... ,expr) means expr with comma before will be evaluated
+;; before inserting into the list
+(with-eval-after-load 'elpy
+  (setq yas-snippet-dirs `("~/Dropbox/spacemacs/snippets"
+                           ,(concat (file-name-directory (locate-library "elpy")) "snippets"))))
+
+(with-eval-after-load 'yasnippet
+  (yas-global-mode 1))
 
 (setq python-shell-interpreter "jupyter-console")
 
@@ -35,4 +47,6 @@
 ;; display/update images in the buffer after I evaluate
 (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
 
-(add-hook 'after-init-hook 'global-company-mode)
+;; emacs isn't really executing any of the shell init files
+;; I need this for some of my python code currently
+(setenv "CEZANNE_CONFIG" (shell-command-to-string "echo $CEZANNE_CONFIG"))
