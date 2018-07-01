@@ -1,7 +1,9 @@
 (defconst nandu-packages
-  '(zotxt
-    sphinx-doc
+  '(
     (python :excluded t)
+    zotxt
+    sphinx-doc
+    ob-ipython
     )
   )
 
@@ -11,4 +13,8 @@
 
 (defun nandu/init-sphinx-doc()
   (use-package sphinx-doc :defer t)
+  )
+
+(defun nandu/init-ob-ipython()
+  (use-package ob-ipython :defer t)
   )
