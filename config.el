@@ -27,7 +27,7 @@
 (with-eval-after-load 'company
 	(add-to-list 'company-backends 'company-ob-ipython))
 
-(setq python-shell-interpreter "jupyter")
+(setq python-shell-interpreter "jupyter-console")
 
 ;; don't prompt me to confirm everytime I want to evaluate a block
 (setq org-confirm-babel-evaluate nil)
