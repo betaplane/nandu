@@ -4,4 +4,6 @@
 # condition: (not (org-at-table-p))
 # type: command
 # --
-(nandu--ob-ipython-shift-return t)
+(when (not (member "silent" (assoc :result-params (nth 2 (org-babel-get-src-block-info)))))
+  (add-hook 'org-babel-after-execute-hook 'nandu-babel-after-execute-hook))
+(nandu--ob-ipython-shift-return)

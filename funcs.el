@@ -36,7 +36,6 @@
   ;; in particular to allow both png and pdf files to be saved,
   ;; but only the png to be included in the org file
   (defun ob-ipython--render (file-or-nil values)
-    (message "NANDUPY")
     (let* ((res_dir (buffer-local-value 'ob-ipython-resources-dir (current-buffer)))
           (file-base (or file-or-nil (make-temp-name res_dir)))
           (org (lambda (value) value))
@@ -67,33 +66,27 @@
             (-when-let (val (cdr (assoc 'text/plain values))) (funcall txt val)))))
     )
 
-(defun nandu--ob-ipython-shift-return (&optional yas)
-  (when (or nandu-shift-return yas)
-    (let* ((pos (point-at-bol))
-           (el1 (org-element-at-point))
-           (el2 nil)
-           (src (car el1))
-           (pl (pop (cdr el1)))
-           (blank (plist-get pl :post-blank)))
-      (cond ((string= src "src-block")
-             (setq pos (plist-get pl :end))
-             (setq blank (- (count-lines 1 pos) blank (count-lines 1 (point-at-bol))))
+(defun nandu--ob-ipython-shift-return ()
+  (let* ((pos (point-at-bol))
+         (pl (pop (cdr (org-element-at-point))))
+         (blank (plist-get pl :post-blank)))
+    (cond ((org-babel-when-in-src-block)
+           (setq pos (plist-get pl :end))
+           (setq blank (- (count-lines 1 pos) blank (count-lines 1 (point-at-bol))))
+           (when (org-babel-where-is-src-block-result)
              (save-excursion
                (goto-char pos)
-               (setq el2 (org-element-at-point))
-               (when (string= (car el2) "drawer")
-                 (setq pos (plist-get (pop (cdr el2)) :end))))))
-      (cond ((and
-              (not (string= (car el2) "drawer"))
-              (string= src "src-block")
-              (> blank 0) ;; not beyond the #+end_src
-              (string-match-p "[:alnum:]" (plist-get pl :value))) ;; there's code in the src_block
-             (setq-local nandu-shift-return t)
-             (org-babel-execute-src-block))
-            (t
-             (goto-char pos)
-             (setq-local nandu-shift-return nil)
-             (yas-expand-snippet (yas-lookup-snippet "ob-ipython source block")))))))
+               (setq pos (plist-get (pop (cdr (org-element-at-point))) :end))))))
+    (cond ((and
+            (org-babel-when-in-src-block)
+            (not (org-babel-where-is-src-block-result))
+            (> blank 0) ;; not beyond the #+end_src
+            (string-match-p "[:alnum:]" (plist-get pl :value)) ;; there's code in the src_block
+            )
+           (org-babel-execute-src-block))
+          (t
+           (goto-char pos)
+           (yas-expand-snippet (yas-lookup-snippet "ob-ipython source block"))))))
 
 (defun nandu--ob-ipython-delete ()
   (interactive)
@@ -103,6 +96,6 @@
       (let ((params (pop (cdr elmt))))
         (delete-region (plist-get params :begin) (plist-get params :end))))))
 
-(defun nandu-org-after-execute-hook ()
-  (org-display-inline-images t t)
+(defun nandu-babel-after-execute-hook ()
+  (remove-hook 'org-babel-after-execute-hook 'nandu-babel-after-execute-hook)
   (nandu--ob-ipython-shift-return))

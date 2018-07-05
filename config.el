@@ -1,5 +1,3 @@
-(defvar nandu-shift-return nil)
-
 (with-eval-after-load 'org
   (setq org-directory "~/Dropbox/org")
   (setq org-agenda-files
@@ -23,7 +21,7 @@
 ;; the form `(... ,expr) means expr with comma before will be evaluated
 ;; before inserting into the list
 (with-eval-after-load 'elpy
-  (setq yas-snippet-dirs `(,(file-name-as-directory (expand-file-name "snippets" (file-name-directory (symbol-file 'nandu-shift-return))))
+  (setq yas-snippet-dirs `(,(file-name-as-directory (expand-file-name "snippets" (file-name-directory (symbol-file 'nandu-babel-after-execute-hook))))
                            ,(file-name-as-directory (expand-file-name "snippets" (file-name-directory (locate-library "elpy")))))))
 
 (setq python-shell-interpreter "jupyter-console")
@@ -35,7 +33,7 @@
 ;; (setq org-confirm-shell-link-function nil) ; doesn't seem to apply
 
 ;; display/update images in the buffer after I evaluate
-(add-hook 'org-babel-after-execute-hook 'nandu-org-after-execute-hook)
+(add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
 
 (add-hook 'org-mode-hook 'nandu-set-ob-ipython-directory)
 
