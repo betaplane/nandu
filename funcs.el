@@ -90,11 +90,14 @@
 
 (defun nandu--ob-ipython-delete ()
   (interactive)
-  (let* ((elmt (org-element-at-point))
-         (src (car elmt)))
-    (when (or (string= src "src-block") (string= src "drawer"))
-      (let ((params (pop (cdr elmt))))
-        (delete-region (plist-get params :begin) (plist-get params :end))))))
+  (cond ((org-babel-when-in-src-block)
+         (org-babel-remove-result)
+         (let ((pl (pop (cdr (org-element-at-point)))))
+           (delete-region (plist-get pl :begin) (plist-get pl :end)))
+        (goto-char (org-babel-previous-src-block)))
+        (t
+         (goto-char (org-babel-previous-src-block))
+         (org-babel-remove-result))))
 
 (defun nandu-babel-after-execute-hook ()
   (remove-hook 'org-babel-after-execute-hook 'nandu-babel-after-execute-hook)
