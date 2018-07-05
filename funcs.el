@@ -69,24 +69,31 @@
 
 (defun nandu--ob-ipython-shift-return (&optional yas)
   (when (or nandu-shift-return yas)
-    (let* ((pos (point))
+    (let* ((pos (point-at-bol))
            (el1 (org-element-at-point))
-           (el2 nil))
-      (when (string= (car el1) "src-block")
-        (setq pos (plist-get (pop (cdr el1)) :end))
-        (save-excursion
-          (goto-char pos)
-          (setq el2 (org-element-at-point))
-          (when (string= (car el2) "drawer")
-            (setq pos (plist-get (pop (cdr el2)) :end)))))
-      (if (and (not (string= (car el2) "drawer")) (string= (car el1) "src-block"))
-          (progn
-            (setq-local nandu-shift-return t)
-            (org-babel-execute-src-block))
-        (progn
-          (goto-char pos)
-          (setq-local nandu-shift-return nil)
-          (yas-expand-snippet (yas-lookup-snippet "ob-ipython source block")))))))
+           (el2 nil)
+           (src (car el1))
+           (pl (pop (cdr el1)))
+           (blank (plist-get pl :post-blank)))
+      (cond ((string= src "src-block")
+             (setq pos (plist-get pl :end))
+             (setq blank (- (count-lines 1 pos) blank (count-lines 1 (point-at-bol))))
+             (save-excursion
+               (goto-char pos)
+               (setq el2 (org-element-at-point))
+               (when (string= (car el2) "drawer")
+                 (setq pos (plist-get (pop (cdr el2)) :end))))))
+      (cond ((and
+              (not (string= (car el2) "drawer"))
+              (string= src "src-block")
+              (> blank 0) ;; not beyond the #+end_src
+              (string-match-p "[:alnum:]" (plist-get pl :value))) ;; there's code in the src_block
+             (setq-local nandu-shift-return t)
+             (org-babel-execute-src-block))
+            (t
+             (goto-char pos)
+             (setq-local nandu-shift-return nil)
+             (yas-expand-snippet (yas-lookup-snippet "ob-ipython source block")))))))
 
 
 (defun nandu-org-after-execute-hook ()
