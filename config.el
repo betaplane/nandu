@@ -1,3 +1,5 @@
+(defvar nandu-shift-return nil)
+
 (with-eval-after-load 'org
   (setq org-directory "~/Dropbox/org")
   (setq org-agenda-files
@@ -20,8 +22,8 @@
 ;; the form `(... ,expr) means expr with comma before will be evaluated
 ;; before inserting into the list
 (with-eval-after-load 'elpy
-  (setq yas-snippet-dirs `("~/Dropbox/spacemacs/snippets"
-                           ,(concat (file-name-directory (locate-library "elpy")) "snippets"))))
+  (setq yas-snippet-dirs `(,(file-name-as-directory (expand-file-name "snippets" (file-name-directory (symbol-file 'nandu-shift-return))))
+                           ,(file-name-as-directory (expand-file-name "snippets" (file-name-directory (locate-library "elpy")))))))
 
 (setq python-shell-interpreter "jupyter-console")
 
@@ -43,5 +45,3 @@
 ;; emacs isn't really executing any of the shell init files
 ;; I need this for some of my python code currently
 (setenv "CEZANNE_CONFIG" "~/Dropbox/general.cfg")
-
-(defvar nandu-shift-return nil)

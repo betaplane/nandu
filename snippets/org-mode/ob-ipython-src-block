@@ -1,0 +1,9 @@
+# -*- mode: snippet -*-
+# name: ob-ipython source block
+# key: ypy
+# type: snippet
+# --
+#+begin_src ipython :session :results raw drawer
+`yas-selected-text`$0
+#+end_src
+

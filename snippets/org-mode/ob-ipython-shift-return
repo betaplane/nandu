@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: ob-ipython shift return
+# binding: S-<return>
+# condition: (not (org-at-table-p))
+# type: command
+# --
+(nandu--ob-ipython-shift-return t)
