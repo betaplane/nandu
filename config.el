@@ -12,7 +12,8 @@
   (setq org-preview-latex-default-process 'dvisvgm)
   (org-babel-do-load-languages 'org-babel-load-languages '((ipython . t)))
   ;;  (setq org-todo-keywords '((sequence "TODO" "|" "DONE")))
-  )
+  (evil-define-key 'normal org-mode-map
+    (kbd "DEL") 'nandu--ob-ipython-delete))
 
 (with-eval-after-load 'company
 	(add-to-list 'company-backends 'company-ob-ipython)

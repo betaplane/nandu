@@ -95,6 +95,13 @@
              (setq-local nandu-shift-return nil)
              (yas-expand-snippet (yas-lookup-snippet "ob-ipython source block")))))))
 
+(defun nandu--ob-ipython-delete ()
+  (interactive)
+  (let* ((elmt (org-element-at-point))
+         (src (car elmt)))
+    (when (or (string= src "src-block") (string= src "drawer"))
+      (let ((params (pop (cdr elmt))))
+        (delete-region (plist-get params :begin) (plist-get params :end))))))
 
 (defun nandu-org-after-execute-hook ()
   (org-display-inline-images t t)
