@@ -10,8 +10,9 @@
   (setq org-preview-latex-default-process 'dvisvgm)
   (org-babel-do-load-languages 'org-babel-load-languages '((ipython . t)))
   ;;  (setq org-todo-keywords '((sequence "TODO" "|" "DONE")))
+  (setq org-image-actual-width 600) ;; needs maybe seperate setting by computer
   (evil-define-key 'normal org-mode-map
-    (kbd "DEL") 'nandu--ob-ipython-delete))
+    (kbd "DEL") 'nandu-babel-delete))
 
 (with-eval-after-load 'company
 	(add-to-list 'company-backends 'company-ob-ipython)
@@ -40,7 +41,3 @@
 (add-hook 'after-init-hook (lambda ()
                              (yas-global-mode t)
                              (global-company-mode t)))
-
-;; emacs isn't really executing any of the shell init files
-;; I need this for some of my python code currently
-(setenv "CEZANNE_CONFIG" "~/Dropbox/general.cfg")
