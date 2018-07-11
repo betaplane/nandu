@@ -124,3 +124,24 @@
 (defun nandu-babel-after-execute-hook ()
   (remove-hook 'org-babel-after-execute-hook 'nandu-babel-after-execute-hook)
   (nandu--ob-ipython-shift-return))
+
+;; This is how font-lock-mode appears to work with functions
+(defun nandu-font-lock-caption (limit)
+  (let ((case-fold-search t))
+    (while (re-search-forward "^[ \t]*#\\+caption:\\([^\n]*\\)$" limit t)
+      (let ((beg (match-beginning 1))
+            (end (match-end 1)))
+        ;; (remove-text-properties beg end '(font-lock-fontified t))
+        ;; (add-text-properties beg end '(face (:background "Blue1")))
+        (save-excursion
+          (goto-char beg)
+          (org-do-emphasis-faces end)) ;; this just runs the emphasis function again
+        ))))
+
+;; I don't manage to make it work when I prepend (add-to-list) the 'keyword' function
+(defun nandu-font-lock-set-keywords-hook ()
+  ;; (setq-local org-font-lock-extra-keywords (append org-font-lock-extra-keywords '(("avail" 0 '(:background "Blue1") t))))
+  ;; (setq-local org-font-lock-extra-keywords (remove '(org-fontify-meta-lines-and-blocks) org-font-lock-extra-keywords))
+  (setq org-font-lock-extra-keywords (append org-font-lock-extra-keywords '((nandu-font-lock-caption))))
+  ;; (add-to-list 'org-font-lock-extra-keywords '(nandu-test-font))
+  )

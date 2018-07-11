@@ -12,7 +12,8 @@
   ;;  (setq org-todo-keywords '((sequence "TODO" "|" "DONE")))
   (setq org-image-actual-width 600) ;; needs maybe seperate setting by computer
   (evil-define-key 'normal org-mode-map
-    (kbd "DEL") 'nandu-babel-delete))
+    (kbd "DEL") 'nandu-babel-delete)
+  )
 
 (with-eval-after-load 'company
 	(add-to-list 'company-backends 'company-ob-ipython)
@@ -37,6 +38,9 @@
 (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
 
 (add-hook 'org-mode-hook 'nandu-set-ob-ipython-directory)
+
+(add-hook 'org-font-lock-set-keywords-hook 'nandu-font-lock-set-keywords-hook)
+;; (remove-hook 'org-font-lock-set-keywords-hook 'nandu-font-lock-set-keywords-hook)
 
 (add-hook 'after-init-hook (lambda ()
                              (yas-global-mode t)
