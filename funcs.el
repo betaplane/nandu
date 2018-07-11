@@ -76,7 +76,14 @@
            (when (org-babel-where-is-src-block-result)
              (save-excursion
                (goto-char pos)
-               (setq pos (org-element-property :end (org-element-at-point)))))))
+               (goto-char (org-element-property :contents-end (org-element-at-point)))
+               (forward-line (1+ nandu-post-result-lines))
+               (setq pos (point-at-bol)))))
+          ((string= "drawer" (org-element-type el))
+           (save-excursion
+             (goto-char (org-element-property :contents-end el))
+             (forward-line (1+ nandu-post-result-lines))
+             (setq pos (point-at-bol)))))
     (cond ((and
             (org-babel-when-in-src-block)
             (not (org-babel-where-is-src-block-result))
@@ -91,7 +98,7 @@
 (defun nandu-babel--delete-result-file ()
   (save-excursion
     (goto-char (org-element-property :end (org-element-at-point)))
-    (let* ((el (org-element-at-point))
+    (when-let* ((el (org-element-at-point))
            (begin (org-element-property :contents-begin el))
            (end (org-element-property :contents-end el)))
       (goto-char begin)
@@ -162,6 +169,8 @@
 (defun nandu-font-lock-set-keywords-hook ()
   ;; (setq-local org-font-lock-extra-keywords (append org-font-lock-extra-keywords '(("avail" 0 '(:background "Blue1") t))))
   ;; (setq-local org-font-lock-extra-keywords (remove '(org-fontify-meta-lines-and-blocks) org-font-lock-extra-keywords))
-  (setq org-font-lock-extra-keywords (append org-font-lock-extra-keywords '((nandu-font-lock-caption) (nandu-image-overlay))))
+  (setq org-font-lock-extra-keywords (nconc org-font-lock-extra-keywords '((nandu-font-lock-caption))))
+  (when nandu-image-background-color
+    (setq org-font-lock-extra-keywords (nconc org-font-lock-extra-keywords '((nandu-image-overlay)))))
   ;; (add-to-list 'org-font-lock-extra-keywords '(nandu-test-font))
   )

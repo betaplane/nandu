@@ -1,4 +1,6 @@
-(defvar nandu-image-background-color "white")
+(defvar nandu-image-background-color nil)
+(defvar nandu-post-result-lines 2)
+
 
 (with-eval-after-load 'org
   (setq org-directory "~/Dropbox/org")

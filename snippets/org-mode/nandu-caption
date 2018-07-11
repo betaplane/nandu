@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: org-babel caption
+# key: cap
+# --
+#+CAPTION: `yas-selected-text`$0
