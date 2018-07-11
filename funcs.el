@@ -138,10 +138,30 @@
           (org-do-emphasis-faces end)) ;; this just runs the emphasis function again
         ))))
 
+(defun nandu-image-overlay (limit)
+  (while (< (point) limit)
+    (let ((imov (get-char-property-and-overlay (point) 'org-image-overlay))
+          (nanov (get-char-property-and-overlay (point) 'nandu-image-overlay)))
+      (when (car imov)
+        (let* ((ov (cdr imov))
+               (im (overlay-get ov 'display)))
+          (setf (image-property im :background) nandu-image-background-color))
+        (when (not (car nanov))
+          (let* ((ov (cdr imov))
+                 (nanov (make-overlay (overlay-start ov)
+                                 (save-excursion
+                                   (goto-char (overlay-end ov))
+                                   (forward-line 1)
+                                   (point)))))
+          (overlay-put nanov 'evaporate t)
+          (overlay-put nanov 'nandu-image-overlay t)
+          (overlay-put nanov 'face `(:background ,nandu-image-background-color))))))
+    (forward-line 1)))
+
 ;; I don't manage to make it work when I prepend (add-to-list) the 'keyword' function
 (defun nandu-font-lock-set-keywords-hook ()
   ;; (setq-local org-font-lock-extra-keywords (append org-font-lock-extra-keywords '(("avail" 0 '(:background "Blue1") t))))
   ;; (setq-local org-font-lock-extra-keywords (remove '(org-fontify-meta-lines-and-blocks) org-font-lock-extra-keywords))
-  (setq org-font-lock-extra-keywords (append org-font-lock-extra-keywords '((nandu-font-lock-caption))))
+  (setq org-font-lock-extra-keywords (append org-font-lock-extra-keywords '((nandu-font-lock-caption) (nandu-image-overlay))))
   ;; (add-to-list 'org-font-lock-extra-keywords '(nandu-test-font))
   )

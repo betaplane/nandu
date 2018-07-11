@@ -1,3 +1,5 @@
+(defvar nandu-image-background-color "white")
+
 (with-eval-after-load 'org
   (setq org-directory "~/Dropbox/org")
   (setq org-agenda-files
