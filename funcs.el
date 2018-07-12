@@ -4,12 +4,12 @@
     (if (equal (car lenv) "conda")
         (let ((env (pop (cdr lenv))))
           (pyvenv-activate (expand-file-name env conda-envs-directory))
-          (setq-local python-shell-interpreter-args
+          (setq python-shell-interpreter-args
                       (concat "--simple-prompt --kernel " env))
           )
       (progn
         (pyvenv-activate (expand-file-name env non-conda-envs-directory))
-        (setq-local python-shell-interpreter-args
+        (setq python-shell-interpreter-args
                     (concat "--kernel " env))
         )))
   )
@@ -17,20 +17,13 @@
 ;; https://github.com/gregsexton/ob-ipython
 ;; https://vxlabs.com/tag/ob-ipython/
 
+;; function overrides
 (with-eval-after-load 'ob-ipython
   ;; this is because ob-ipython uses python-shell-interpreter in order to
   ;; find the "python" command, whereas for elpy I need to set it to "jupyter"
   ;; ob-ipython currently uses this only in this particular function
   ;; one might have to change it if that changes
 	(defun ob-ipython--get-python () "python3")
-
-  (defun nandu-set-ob-ipython-directory ()
-    (let ((encl (file-name-directory (buffer-file-name)))
-          (res_dir (car (get 'ob-ipython-resources-dir 'standard-value))))
-      (setq-local ob-ipython-resources-dir
-                  (file-name-as-directory
-                   (expand-file-name
-                    (file-name-base (buffer-file-name)) (concat encl res_dir))))))
 
   ;; this overrides the rendering of output in ob-ipython,
   ;; in particular to allow both png and pdf files to be saved,
@@ -64,7 +57,17 @@
             (-when-let (val (cdr (assoc 'image/png values))) (funcall png val))
             (-when-let (val (cdr (assoc 'image/svg+xml values))) (funcall svg val))
             (-when-let (val (cdr (assoc 'text/plain values))) (funcall txt val)))))
-    )
+  )
+
+;; experimental
+(defun nandu-run-ob-ipython-startup (&optional ob-ipy-args)
+  (let ((args '((:session . nil)))
+        (file (expand-file-name "startup.py" (file-name-directory load-file-name))))
+    (org-babel-execute:ipython (format "a=%s" file) args)))
+
+
+;; FUNCTIONS (FOR KEY BINDINGS / SNIPPETS)
+;; =======================================
 
 (defun nandu--ob-ipython-shift-return ()
   (let* ((pos (point-at-bol))
@@ -129,9 +132,9 @@
          (org-babel-remove-result)
          )))
 
-(defun nandu-babel-after-execute-hook ()
-  (remove-hook 'org-babel-after-execute-hook 'nandu-babel-after-execute-hook)
-  (nandu--ob-ipython-shift-return))
+
+;; FONT LOCK MODE
+;; ==============
 
 ;; This is how font-lock-mode appears to work with functions
 (defun nandu-font-lock-caption (limit)
@@ -169,15 +172,9 @@
           (overlay-put nanov 'face `(:background ,nandu-image-background-color))))))
     (forward-line 1)))
 
-;; I don't manage to make it work when I prepend (add-to-list) the 'keyword' function
-(defun nandu-font-lock-set-keywords-hook ()
-  ;; (setq-local org-font-lock-extra-keywords (append org-font-lock-extra-keywords '(("avail" 0 '(:background "Blue1") t))))
-  ;; (setq-local org-font-lock-extra-keywords (remove '(org-fontify-meta-lines-and-blocks) org-font-lock-extra-keywords))
-  (setq org-font-lock-extra-keywords (nconc org-font-lock-extra-keywords '((nandu-font-lock-caption))))
-  (when nandu-image-background-color
-    (setq org-font-lock-extra-keywords (nconc org-font-lock-extra-keywords '((nandu-image-overlay)))))
-  ;; (add-to-list 'org-font-lock-extra-keywords '(nandu-test-font))
-  )
+
+;; ADVICE
+;; ======
 
 ;; this function gets advised :befor org-display-image-remove-overlay, which is called by
 ;; modification-hooks for the image overlay
@@ -191,3 +188,35 @@
           (delete-file f t)
           (message "File %s deleted [nandu-babel]" f)))
         )))
+
+
+;; HOOKS
+;; =====
+
+(defun nandu-babel-after-execute-hook ()
+  (remove-hook 'org-babel-after-execute-hook 'nandu-babel-after-execute-hook)
+  (nandu--ob-ipython-shift-return))
+
+(defun nandu-org-mode-hook ()
+  (let ((encl (file-name-directory (buffer-file-name)))
+        (res_dir (car (get 'ob-ipython-resources-dir 'standard-value)))
+        (nandu_dir (file-name-directory (symbol-file 'nandu-org-mode-hook))))
+    (setq-local ob-ipython-resources-dir
+                (file-name-as-directory
+                 (expand-file-name
+                  (file-name-base (buffer-file-name)) (concat encl res_dir))))
+  (setenv "PYTHONSTARTUP" (expand-file-name "startup.py" nandu_dir))))
+
+;; I don't manage to make it work when I prepend (add-to-list) the 'keyword' function
+(defun nandu-font-lock-set-keywords-hook ()
+  ;; (setq-local org-font-lock-extra-keywords (append org-font-lock-extra-keywords '(("avail" 0 '(:background "Blue1") t))))
+  ;; (setq-local org-font-lock-extra-keywords (remove '(org-fontify-meta-lines-and-blocks) org-font-lock-extra-keywords))
+  (setq org-font-lock-extra-keywords (nconc org-font-lock-extra-keywords '((nandu-font-lock-caption))))
+  (when nandu-image-background-color
+    (setq org-font-lock-extra-keywords (nconc org-font-lock-extra-keywords '((nandu-image-overlay)))))
+  ;; (add-to-list 'org-font-lock-extra-keywords '(nandu-test-font))
+  )
+
+(defun nandu-after-init-hook ()
+  (yas-global-mode t)
+  (global-company-mode t))

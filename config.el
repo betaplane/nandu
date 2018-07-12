@@ -28,9 +28,11 @@
 ;; the form `(... ,expr) means expr with comma before will be evaluated
 ;; before inserting into the list
 (with-eval-after-load 'elpy
-  (setq yas-snippet-dirs `(,(file-name-as-directory (expand-file-name "snippets" (file-name-directory (symbol-file 'nandu-babel-after-execute-hook))))
-                           ,(file-name-as-directory (expand-file-name "snippets" (file-name-directory (locate-library "elpy")))))))
+  (setq yas-snippet-dirs `(,(expand-file-name "snippets" (file-name-directory (symbol-file 'nandu-org-mode-hook)))
+                           ,(expand-file-name "snippets" (file-name-directory (locate-library "elpy"))))
+        ))
 
+;; for use with elpy
 (setq python-shell-interpreter "jupyter-console")
 
 ;; don't prompt me to confirm everytime I want to evaluate a block
@@ -42,16 +44,14 @@
 ;; display/update images in the buffer after I evaluate
 (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
 
-(add-hook 'org-mode-hook 'nandu-set-ob-ipython-directory)
+(add-hook 'org-mode-hook 'nandu-org-mode-hook)
 
 (add-hook 'org-font-lock-set-keywords-hook 'nandu-font-lock-set-keywords-hook)
 ;; (remove-hook 'org-font-lock-set-keywords-hook 'nandu-font-lock-set-keywords-hook)
 
-(add-hook 'after-init-hook (lambda ()
-                             (yas-global-mode t)
-                             (global-company-mode t)))
+(add-hook 'after-init-hook 'nandu-after-init-hook)
+
+(add-hook 'elpy-mode-hook (lambda () (setenv "PYTHONSTARTUP" nil)))
 
 ;; as per ipython default settings, this file should get executed on startup
-(setenv "PYTHONSTARTUP" (expand-file-name "startup.py"
-                                          (file-name-directory (symbol-file 'nandu-babel-after-execute-hook))))
-
+;; (setenv "PYTHONSTARTUP" (expand-file-name "startup.py" (file-name-directory load-file-name)))
