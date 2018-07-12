@@ -17,6 +17,7 @@
   (setq org-image-actual-width 600) ;; needs maybe seperate setting by computer
   (evil-define-key 'normal org-mode-map
     (kbd "DEL") 'nandu-babel-delete)
+  (advice-add 'org-display-inline-remove-overlay :before 'nandu-display-image-remove-overlay)
   )
 
 (with-eval-after-load 'company

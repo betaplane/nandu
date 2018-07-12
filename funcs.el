@@ -95,6 +95,7 @@
            (goto-char pos)
            (yas-expand-snippet (yas-lookup-snippet "ob-ipython source block"))))))
 
+;; obsolete
 (defun nandu-babel--delete-result-file ()
   (save-excursion
     (goto-char (org-element-property :end (org-element-at-point)))
@@ -117,14 +118,14 @@
   (interactive)
   (cond ((org-babel-when-in-src-block)
          (when (org-babel-where-is-src-block-result)
-           (nandu-babel--delete-result-file)
+           ;; (nandu-babel--delete-result-file)
            (org-babel-remove-result))
          (let ((el (org-element-at-point)))
            (delete-region (org-element-property :begin el) (org-element-property :end el)))
         (goto-char (org-babel-previous-src-block)))
         ((string= "drawer" (org-element-type (org-element-at-point)))
          (goto-char (org-babel-previous-src-block))
-         (nandu-babel--delete-result-file)
+         ;; (nandu-babel--delete-result-file)
          (org-babel-remove-result)
          )))
 
@@ -145,6 +146,9 @@
           (org-do-emphasis-faces end)) ;; this just runs the emphasis function again
         ))))
 
+;; adds a :background color attribute to inlined images and an overlay extending
+;; over the whole line with the same background color as the image
+;; works as a font-lock-keyword, but gets only added if nandu-image-background-color is not nil
 (defun nandu-image-overlay (limit)
   (while (< (point) limit)
     (let ((imov (get-char-property-and-overlay (point) 'org-image-overlay))
@@ -174,3 +178,16 @@
     (setq org-font-lock-extra-keywords (nconc org-font-lock-extra-keywords '((nandu-image-overlay)))))
   ;; (add-to-list 'org-font-lock-extra-keywords '(nandu-test-font))
   )
+
+;; this function gets advised :befor org-display-image-remove-overlay, which is called by
+;; modification-hooks for the image overlay
+;; it causes image files to be deleted if the image overlay is removed
+(defun nandu-display-image-remove-overlay (ov after _beg _end &optional _len)
+  (let ((inhibit-modification-hooks t))
+    (when (and ov after)
+      (let* ((im (overlay-get ov 'display))
+             (file (file-name-sans-extension (image-property im :file))))
+        (dolist (f (file-expand-wildcards (concat file "*")))
+          (delete-file f t)
+          (message "File %s deleted [nandu-babel]" f)))
+        )))
