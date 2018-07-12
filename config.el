@@ -49,3 +49,8 @@
 (add-hook 'after-init-hook (lambda ()
                              (yas-global-mode t)
                              (global-company-mode t)))
+
+;; as per ipython default settings, this file should get executed on startup
+(setenv "PYTHONSTARTUP" (expand-file-name "startup.py"
+                                          (file-name-directory (symbol-file 'nandu-babel-after-execute-hook))))
+
