@@ -60,10 +60,11 @@
   )
 
 ;; experimental
-(defun nandu-run-ob-ipython-startup (&optional ob-ipy-args)
-  (let ((args '((:session . nil)))
-        (file (expand-file-name "startup.py" (file-name-directory load-file-name))))
-    (org-babel-execute:ipython (format "a=%s" file) args)))
+(defun nandu-run-ipython-startup ()
+  (let* ((args '((:session . nil)))
+        (file (expand-file-name "startup.py" (file-name-directory (symbol-file 'nandu-run-ipython-startup))))
+        (cmd (format "import runpy; globals().update(runpy.run_path('%s'))" file)))
+    (org-babel-execute:ipython cmd args)))
 
 
 ;; FUNCTIONS (FOR KEY BINDINGS / SNIPPETS)
@@ -189,6 +190,10 @@
           (message "File %s deleted [nandu-babel]" f)))
         )))
 
+(defun nandu-create-process (name cmd)
+  (message "NANDU create-process name %s, cmd %s" name cmd)
+  (nandu-run-ipython-startup))
+
 
 ;; HOOKS
 ;; =====
@@ -199,13 +204,11 @@
 
 (defun nandu-org-mode-hook ()
   (let ((encl (file-name-directory (buffer-file-name)))
-        (res_dir (car (get 'ob-ipython-resources-dir 'standard-value)))
-        (nandu_dir (file-name-directory (symbol-file 'nandu-org-mode-hook))))
+        (res_dir (car (get 'ob-ipython-resources-dir 'standard-value))))
     (setq-local ob-ipython-resources-dir
                 (file-name-as-directory
                  (expand-file-name
-                  (file-name-base (buffer-file-name)) (concat encl res_dir))))
-  (setenv "PYTHONSTARTUP" (expand-file-name "startup.py" nandu_dir))))
+                  (file-name-base (buffer-file-name)) (concat encl res_dir))))))
 
 ;; I don't manage to make it work when I prepend (add-to-list) the 'keyword' function
 (defun nandu-font-lock-set-keywords-hook ()

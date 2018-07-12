@@ -18,6 +18,7 @@
   (evil-define-key 'normal org-mode-map
     (kbd "DEL") 'nandu-babel-delete)
   (advice-add 'org-display-inline-remove-overlay :before 'nandu-display-image-remove-overlay)
+  (advice-add 'ob-ipython--create-process :after 'nandu-create-process)
   )
 
 (with-eval-after-load 'company
@@ -50,8 +51,6 @@
 ;; (remove-hook 'org-font-lock-set-keywords-hook 'nandu-font-lock-set-keywords-hook)
 
 (add-hook 'after-init-hook 'nandu-after-init-hook)
-
-(add-hook 'elpy-mode-hook (lambda () (setenv "PYTHONSTARTUP" nil)))
 
 ;; as per ipython default settings, this file should get executed on startup
 ;; (setenv "PYTHONSTARTUP" (expand-file-name "startup.py" (file-name-directory load-file-name)))
