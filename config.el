@@ -17,8 +17,8 @@
   (setq org-image-actual-width 600) ;; needs maybe seperate setting by computer
   (evil-define-key 'normal org-mode-map
     (kbd "DEL") 'nandu-babel-delete)
-  (advice-add 'org-display-inline-remove-overlay :before 'nandu-display-image-remove-overlay)
-  (advice-add 'ob-ipython--create-process :after 'nandu-create-process)
+  ;; (advice-add 'org-display-inline-remove-overlay :before 'nandu-display-image-remove-overlay)
+  ;; (advice-add 'ob-ipython--create-process :after 'nandu-create-process)
   )
 
 (with-eval-after-load 'company
@@ -48,9 +48,5 @@
 (add-hook 'org-mode-hook 'nandu-org-mode-hook)
 
 (add-hook 'org-font-lock-set-keywords-hook 'nandu-font-lock-set-keywords-hook)
-;; (remove-hook 'org-font-lock-set-keywords-hook 'nandu-font-lock-set-keywords-hook)
 
 (add-hook 'after-init-hook 'nandu-after-init-hook)
-
-;; as per ipython default settings, this file should get executed on startup
-;; (setenv "PYTHONSTARTUP" (expand-file-name "startup.py" (file-name-directory load-file-name)))

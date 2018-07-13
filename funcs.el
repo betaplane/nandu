@@ -59,7 +59,7 @@
             (-when-let (val (cdr (assoc 'text/plain values))) (funcall txt val)))))
   )
 
-;; experimental
+;; experimental, see nandu-create-process
 (defun nandu-run-ipython-startup ()
   (let* ((args '((:session . nil)))
         (file (expand-file-name "startup.py" (file-name-directory (symbol-file 'nandu-run-ipython-startup))))
@@ -117,6 +117,20 @@
               )))
         (forward-line 1)
         ))))
+
+(defun nandu-babel-after-save ()
+  (let ((files (directory-files ob-ipython-resources-dir nil "^[^\\.]")))
+    (org-with-wide-buffer
+     (org-element-map (org-element-parse-buffer) 'link
+       (lambda (el)
+         (when (string= 'file (org-element-property :type el))
+           (let ((file (file-name-base (org-element-property :path el))))
+             (setq files (-remove (lambda (f) (string-match-p file f)) files))
+             )))))
+    (dolist (f files)
+      (delete-file (expand-file-name f ob-ipython-resources-dir) t)
+      (message "File %s deleted [nandu-babel-before-save]" (file-name-nondirectory f)))
+    ))
 
 (defun nandu-babel-delete ()
   (interactive)
@@ -190,6 +204,7 @@
           (message "File %s deleted [nandu-babel]" f)))
         )))
 
+;; advice-after ob-ipython--create-process
 (defun nandu-create-process (name cmd)
   (message "NANDU create-process name %s, cmd %s" name cmd)
   (nandu-run-ipython-startup))
@@ -202,13 +217,19 @@
   (remove-hook 'org-babel-after-execute-hook 'nandu-babel-after-execute-hook)
   (nandu--ob-ipython-shift-return))
 
+;; gets called quite frequently in org-mode (not only at start)
+;; therefore the condition-case
 (defun nandu-org-mode-hook ()
-  (let ((encl (file-name-directory (buffer-file-name)))
-        (res_dir (car (get 'ob-ipython-resources-dir 'standard-value))))
-    (setq-local ob-ipython-resources-dir
-                (file-name-as-directory
-                 (expand-file-name
-                  (file-name-base (buffer-file-name)) (concat encl res_dir))))))
+  (condition-case err
+      (let ((encl (file-name-directory (buffer-file-name)))
+            (res_dir (car (get 'ob-ipython-resources-dir 'standard-value))))
+        (setq-local ob-ipython-resources-dir
+                    (file-name-as-directory
+                     (expand-file-name
+                      (file-name-base (buffer-file-name)) (concat encl res_dir)))))
+    (error (message "nandu-org-mode-hook: %s" (error-message-string err))))
+  (add-hook 'after-save-hook 'nandu-babel-after-save t t)
+  (message "NANDO org mode hook"))
 
 ;; I don't manage to make it work when I prepend (add-to-list) the 'keyword' function
 (defun nandu-font-lock-set-keywords-hook ()
@@ -222,4 +243,5 @@
 
 (defun nandu-after-init-hook ()
   (yas-global-mode t)
-  (global-company-mode t))
+  (global-company-mode t)
+  (global-visual-line-mode t))
