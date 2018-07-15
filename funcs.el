@@ -78,9 +78,33 @@
   (interactive)
   (let* ((args '((:session . nil)))
         (nandu_dir (file-name-directory (symbol-file 'nandu-run-ipython-startup)))
-        (cmd (format "import sys; sys.path.insert(0, '%s'); import nandu; sys.path.pop(0); nandu.buffer_file_name = lambda: buffer_file_name; nandu.savefig = lambda: savefig" nandu_dir)))
+        (cmd (format "import sys; sys.path.insert(0, '%s'); import nandu; sys.path.pop(0); nandu.buffer_file_name = lambda: buffer_file_name; nandu.savefig = lambda: savefig; nandu.resources_dir = '%s'" nandu_dir ob-ipython-resources-dir)))
     (org-babel-execute:ipython cmd args))
   (add-hook 'org-ctrl-c-ctrl-c-hook 'nandu-ctrl-c-ctrl-c-hook))
+
+
+(defun nandu-append-figure ()
+  (interactive)
+  (let* ((args '((:session . nil)))
+        (file_name (cdr (assoc :savefig (nth 2 (org-babel-get-src-block-info)))))
+        (res_dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir))
+        (path (expand-file-name file_name res_dir))
+        (cmd (format "plt.gcf().savefig('%s')" path)))
+    (org-babel-execute:ipython cmd args)
+    (org-babel-insert-result (format "[[file:%s]]" path) '("raw" "replace"))
+    (org-display-inline-images)))
+
+;; possibly to parse header arguments and hand to python by expanding the source
+;; this will be necessary to have a possible change to the resources_dir if multiple different org files share the same kernel
+(defun nandu-ctrl-c-ctrl-c-hook ()
+  (let ((info (org-babel-get-src-block-info)))
+    (when (string= "ipython" (car info))
+      (let* ((body (nth 1 info))
+             (var (format "buffer_file_name = '%s'\n" (buffer-file-name))))
+        (when (not (string-match-p var body))
+          (org-babel-update-block-body (concat var body)))))))
+;; ob-ipython->org-babel-execute:ipython override and set var in params
+;; possibly with org-babel-merge-params
 
 
 ;; FUNCTIONS (FOR KEY BINDINGS / SNIPPETS)
@@ -90,38 +114,31 @@
   (catch :ctrl
     (let* ((pos (point-at-bol))
            (el (org-element-at-point))
-           (blank (org-element-property :post-blank el)))
+           (blank (org-element-property :post-blank el))
+           (fat (- nandu-post-result-lines blank)))
       (when (string= "src-block" (org-element-type el))
-        (goto-char (org-element-property :end el))
-        (setq blank (- (count-lines 1 (point-at-bol)) blank (count-lines 1 pos))))
+        (when (member "silent"
+                      (alist-get :result-params (nth 2 (org-babel-get-src-block-info))))
+          (org-ctrl-c-ctrl-c)
+          (throw :ctrl t))
+        (goto-char (org-element-property :end el)))
       (let ((el (org-element-at-point))
             (case-fold-search t))
         (cond ((progn
                  (end-of-line)
                  (re-search-backward "^[ \t]*#\\+results:" (org-element-property :begin el) t))
                (goto-char (org-element-property :end el))
-               (let* ((blank (org-element-property :post-blank el))
-                      (fat (- nandu-post-result-lines blank))
-                 (forward-line (min 0 fat))
-                 (newline (max 0 fat))))
+               (setq blank (org-element-property :post-blank el))
+               (setq fat (- nandu-post-result-lines blank)))
               ((and ctrl-c (> blank 0))
                (goto-char pos)
                (org-ctrl-c-ctrl-c)
                (nandu--ob-ipython-shift-return)
-               (throw :ctrl t))))))
+               (throw :ctrl t))))
+      (forward-line (min 0 fat))
+      (newline (max 0 fat)))
     (yas-expand-snippet (yas-lookup-snippet "ob-ipython source block"))))
 
-;; possibly to parse header arguments and hand to python by expanding the source
-;; this will be necessary to have a possible change to the resources_dir if multiple different org files share the same kernel
-(defun nandu-ctrl-c-ctrl-c-hook ()
-  (let ((info (org-babel-get-src-block-info)))
-    (when (string= "ipython" (car info))
-      (let* ((body (nth 1 info))
-             (new-body (concat
-                        (format "buffer_file_name = '%s'\n" (buffer-file-name))
-                        body)))
-        (org-babel-update-block-body new-body)))))
-;; ob-ipython->org-babel-execute:ipython override and set var in params
 
 (defun nandu-babel-delete ()
   (interactive)
@@ -137,38 +154,39 @@
            (goto-char (org-babel-previous-src-block))
            (org-babel-remove-result)))))
 
-  (defun nandu-babel-after-save ()
-    (let ((files (directory-files ob-ipython-resources-dir nil "^[^\\.]")))
-      (org-with-wide-buffer
-       (org-element-map (org-element-parse-buffer) 'link
-         (lambda (el)
-           (when (string= 'file (org-element-property :type el))
-             (let ((file (file-name-base (org-element-property :path el))))
-               (setq files (-remove (lambda (f) (string-match-p file f)) files))
-               )))))
-      (dolist (f files)
-        (delete-file (expand-file-name f ob-ipython-resources-dir) t)
-        (message "File %s deleted [nandu-babel-before-save]" (file-name-nondirectory f)))
-      ))
+(defun nandu-babel-after-save ()
+  (let* ((res_dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir))
+         (files (directory-files res_dir nil "^[^\\.]")))
+    (org-with-wide-buffer
+     (org-element-map (org-element-parse-buffer) 'link
+       (lambda (el)
+         (when (string= 'file (org-element-property :type el))
+           (let ((file (file-name-base (org-element-property :path el))))
+             (setq files (-remove (lambda (f) (string-match-p file f)) files))
+             )))))
+    (dolist (f files)
+      (delete-file (expand-file-name f res_dir) t)
+      (message "File %s deleted [nandu-babel-before-save]" (file-name-nondirectory f)))
+    ))
 
-  ;; obsolete
-  (defun nandu-babel--delete-result-file ()
-    (save-excursion
-      (goto-char (org-element-property :end (org-element-at-point)))
-      (when-let* ((el (org-element-at-point))
-                  (begin (org-element-property :contents-begin el))
-                  (end (org-element-property :contents-end el)))
-        (goto-char begin)
-        (while (< (point) end)
-          (let ((ctxt (org-element-context)))
-            (when (string= "file" (org-element-property :type ctxt))
-              (let ((file (file-name-sans-extension (org-element-property :path ctxt))))
-                (dolist (f (file-expand-wildcards (concat file "*")))
-                  (delete-file f t)
-                  (message "File %s deleted [nandu-babel]" f))
-                )))
-          (forward-line 1)
-          ))))
+;; obsolete
+(defun nandu-babel--delete-result-file ()
+  (save-excursion
+    (goto-char (org-element-property :end (org-element-at-point)))
+    (when-let* ((el (org-element-at-point))
+                (begin (org-element-property :contents-begin el))
+                (end (org-element-property :contents-end el)))
+      (goto-char begin)
+      (while (< (point) end)
+        (let ((ctxt (org-element-context)))
+          (when (string= "file" (org-element-property :type ctxt))
+            (let ((file (file-name-sans-extension (org-element-property :path ctxt))))
+              (dolist (f (file-expand-wildcards (concat file "*")))
+                (delete-file f t)
+                (message "File %s deleted [nandu-babel]" f))
+              )))
+        (forward-line 1)
+        ))))
 
 
 ;; FONT LOCK MODE
@@ -246,14 +264,14 @@
 ;; gets called quite frequently in org-mode (not only at start)
 ;; therefore the condition-case
 (defun nandu-org-mode-hook ()
-  (condition-case err
-      (let ((encl (file-name-directory (buffer-file-name)))
-            (res_dir (car (get 'ob-ipython-resources-dir 'standard-value))))
-        (setq-local ob-ipython-resources-dir
-                    (file-name-as-directory
-                     (expand-file-name
-                      (file-name-base (buffer-file-name)) (concat encl res_dir)))))
-    (error (message "error [nandu-org-mode-hook]: %s" (error-message-string err))))
+  ;; (condition-case err
+  ;;     (let ((encl (file-name-directory (buffer-file-name)))
+  ;;           (res_dir (car (get 'ob-ipython-resources-dir 'standard-value))))
+  ;;       (setq-local ob-ipython-resources-dir
+  ;;                   (file-name-as-directory
+  ;;                    (expand-file-name
+  ;;                     (file-name-base (buffer-file-name)) (concat encl res_dir)))))
+  ;;   (error (message "error [nandu-org-mode-hook]: %s" (error-message-string err))))
   (add-hook 'after-save-hook 'nandu-babel-after-save t t)
   (message "NANDO org mode hook"))
 

@@ -43,12 +43,10 @@
 ;; (setq org-confirm-shell-link-function nil) ; doesn't seem to apply
 
 ;; display/update images in the buffer after I evaluate
-(add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
+;; (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
 
 (add-hook 'org-mode-hook 'nandu-org-mode-hook)
 
 (add-hook 'org-font-lock-set-keywords-hook 'nandu-font-lock-set-keywords-hook)
-
-(add-hook 'org-ctrl-c-ctrl-c-hook 'nandu-ctrl-c-ctrl-c-hook)
 
 (add-hook 'after-init-hook 'nandu-after-init-hook)
