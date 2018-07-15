@@ -78,7 +78,7 @@
   (interactive)
   (let* ((args '((:session . nil)))
         (nandu_dir (file-name-directory (symbol-file 'nandu-run-ipython-startup)))
-        (cmd (format "import sys; sys.path.insert(0, '%s'); import nandu; sys.path.pop(0); nandu.get_file_name = lambda: nandufile; nandu.resources_dir = '%s'" nandu_dir ob-ipython-resources-dir)))
+        (cmd (format "import sys; sys.path.insert(0, '%s'); import nandu; sys.path.pop(0); nandu.buffer_file_name = lambda: buffer_file_name; nandu.savefig = lambda: savefig" nandu_dir)))
     (org-babel-execute:ipython cmd args))
   (add-hook 'org-ctrl-c-ctrl-c-hook 'nandu-ctrl-c-ctrl-c-hook))
 
@@ -108,14 +108,20 @@
                (goto-char pos)
                (org-ctrl-c-ctrl-c)
                (nandu--ob-ipython-shift-return)
-               (throw :ctrl t)))))
+               (throw :ctrl t))))))
     (yas-expand-snippet (yas-lookup-snippet "ob-ipython source block"))))
 
 ;; possibly to parse header arguments and hand to python by expanding the source
+;; this will be necessary to have a possible change to the resources_dir if multiple different org files share the same kernel
 (defun nandu-ctrl-c-ctrl-c-hook ()
-  (message "%s" (org-element-context))
-  )
-
+  (let ((info (org-babel-get-src-block-info)))
+    (when (string= "ipython" (car info))
+      (let* ((body (nth 1 info))
+             (new-body (concat
+                        (format "buffer_file_name = '%s'\n" (buffer-file-name))
+                        body)))
+        (org-babel-update-block-body new-body)))))
+;; ob-ipython->org-babel-execute:ipython override and set var in params
 
 (defun nandu-babel-delete ()
   (interactive)

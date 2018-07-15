@@ -49,4 +49,6 @@
 
 (add-hook 'org-font-lock-set-keywords-hook 'nandu-font-lock-set-keywords-hook)
 
+(add-hook 'org-ctrl-c-ctrl-c-hook 'nandu-ctrl-c-ctrl-c-hook)
+
 (add-hook 'after-init-hook 'nandu-after-init-hook)
