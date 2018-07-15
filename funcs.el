@@ -25,6 +25,20 @@
   ;; one might have to change it if that changes
 	(defun ob-ipython--get-python () "python3")
 
+  ;; removed the extra line with # Out[...], because
+  ;; 1) it interferes with the way I try to detect #+RESULTS:
+  ;; 2) it seems useless, in particular since it doesn't correspond to an Out variable on the Python side
+  (defun ob-ipython--process-response (ret file result-type)
+    (let ((result (cdr (assoc :result ret)))
+          (output (cdr (assoc :output ret))))
+      (if (eq result-type 'output)
+          output
+        (ob-ipython--output output nil)
+        (s-join "\n" (->> (-map (-partial 'ob-ipython--render file)
+                                 (list (cdr (assoc :value result))
+                                       (cdr (assoc :display result))))
+                           (remove-if-not nil))))))
+
   ;; this overrides the rendering of output in ob-ipython,
   ;; in particular to allow both png and pdf files to be saved,
   ;; but only the png to be included in the org file
@@ -97,7 +111,7 @@
                (throw :ctrl t)))))
     (yas-expand-snippet (yas-lookup-snippet "ob-ipython source block"))))
 
-
+;; possibly to parse header arguments and hand to python by expanding the source
 (defun nandu-ctrl-c-ctrl-c-hook ()
   (message "%s" (org-element-context))
   )
@@ -149,7 +163,7 @@
                 )))
           (forward-line 1)
           ))))
-  
+
 
 ;; FONT LOCK MODE
 ;; ==============
@@ -218,6 +232,7 @@
 ;; https://orgmode.org/worg/doc.html
 ;; NOTE: add-hook does not add a hook multiple times and remove-hook does nothing if the hook is not present
 
+;; currently not used - maybe necessary for async calls...
 (defun nandu-babel-after-execute-hook ()
   (remove-hook 'org-babel-after-execute-hook 'nandu-babel-after-execute-hook)
   (nandu--ob-ipython-shift-return))
