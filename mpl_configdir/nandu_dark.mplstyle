@@ -4,3 +4,7 @@ ytick.color: w
 axes.facecolor: none
 figure.facecolor: none
 figure.dpi: 200
+# savefig.bbox: tight
+# savefig.dpi: figure
+# savefig.facecolor: none
+# savefig.edgecolor: none

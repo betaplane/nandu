@@ -61,92 +61,95 @@
 
 ;; experimental, see nandu-create-process
 (defun nandu-run-ipython-startup ()
+  (interactive)
   (let* ((args '((:session . nil)))
-        (file (expand-file-name "startup.py" (file-name-directory (symbol-file 'nandu-run-ipython-startup))))
-        (cmd (format "import runpy; globals().update(runpy.run_path('%s'))" file)))
-    (org-babel-execute:ipython cmd args)))
+        (nandu_dir (file-name-directory (symbol-file 'nandu-run-ipython-startup)))
+        (cmd (format "import sys; sys.path.insert(0, '%s'); import nandu; sys.path.pop(0); nandu.get_file_name = lambda: nandufile; nandu.resources_dir = '%s'" nandu_dir ob-ipython-resources-dir)))
+    (org-babel-execute:ipython cmd args))
+  (add-hook 'org-ctrl-c-ctrl-c-hook 'nandu-ctrl-c-ctrl-c-hook))
 
 
 ;; FUNCTIONS (FOR KEY BINDINGS / SNIPPETS)
 ;; =======================================
 
-(defun nandu--ob-ipython-shift-return ()
-  (let* ((pos (point-at-bol))
-         (el (org-element-at-point))
-         (blank (org-element-property :post-blank el)))
-    (cond ((org-babel-when-in-src-block)
-           (setq pos (org-element-property :end el))
-           (setq blank (- (count-lines 1 pos) blank (count-lines 1 (point-at-bol))))
-           (when (org-babel-where-is-src-block-result)
-             (save-excursion
+(defun nandu--ob-ipython-shift-return (&optional ctrl-c)
+  (catch :ctrl
+    (let* ((pos (point-at-bol))
+           (el (org-element-at-point))
+           (blank (org-element-property :post-blank el)))
+      (when (string= "src-block" (org-element-type el))
+        (goto-char (org-element-property :end el))
+        (setq blank (- (count-lines 1 (point-at-bol)) blank (count-lines 1 pos))))
+      (let ((el (org-element-at-point))
+            (case-fold-search t))
+        (cond ((progn
+                 (end-of-line)
+                 (re-search-backward "^[ \t]*#\\+results:" (org-element-property :begin el) t))
+               (goto-char (org-element-property :end el))
+               (let* ((blank (org-element-property :post-blank el))
+                      (fat (- nandu-post-result-lines blank))
+                 (forward-line (min 0 fat))
+                 (newline (max 0 fat))))
+              ((and ctrl-c (> blank 0))
                (goto-char pos)
-               (goto-char (org-element-property :contents-end (org-element-at-point)))
-               (forward-line (1+ nandu-post-result-lines))
-               (setq pos (point-at-bol)))))
-          ((string= "drawer" (org-element-type el))
-           (save-excursion
-             (goto-char (org-element-property :contents-end el))
-             (forward-line (1+ nandu-post-result-lines))
-             (setq pos (point-at-bol)))))
-    (cond ((and
-            (org-babel-when-in-src-block)
-            (not (org-babel-where-is-src-block-result))
-            (> blank 0) ;; not beyond the #+end_src
-            (string-match-p "[[:alnum:]]" (org-element-property :value el)) ;; there's code in the src_block
-            )
-           (org-babel-execute-src-block))
-          (t
-           (goto-char pos)
-           (yas-expand-snippet (yas-lookup-snippet "ob-ipython source block"))))))
+               (org-ctrl-c-ctrl-c)
+               (nandu--ob-ipython-shift-return)
+               (throw :ctrl t)))))
+    (yas-expand-snippet (yas-lookup-snippet "ob-ipython source block"))))
 
-;; obsolete
-(defun nandu-babel--delete-result-file ()
-  (save-excursion
-    (goto-char (org-element-property :end (org-element-at-point)))
-    (when-let* ((el (org-element-at-point))
-           (begin (org-element-property :contents-begin el))
-           (end (org-element-property :contents-end el)))
-      (goto-char begin)
-      (while (< (point) end)
-        (let ((ctxt (org-element-context)))
-          (when (string= "file" (org-element-property :type ctxt))
-            (let ((file (file-name-sans-extension (org-element-property :path ctxt))))
-              (dolist (f (file-expand-wildcards (concat file "*")))
-                (delete-file f t)
-                (message "File %s deleted [nandu-babel]" f))
-              )))
-        (forward-line 1)
-        ))))
 
-(defun nandu-babel-after-save ()
-  (let ((files (directory-files ob-ipython-resources-dir nil "^[^\\.]")))
-    (org-with-wide-buffer
-     (org-element-map (org-element-parse-buffer) 'link
-       (lambda (el)
-         (when (string= 'file (org-element-property :type el))
-           (let ((file (file-name-base (org-element-property :path el))))
-             (setq files (-remove (lambda (f) (string-match-p file f)) files))
-             )))))
-    (dolist (f files)
-      (delete-file (expand-file-name f ob-ipython-resources-dir) t)
-      (message "File %s deleted [nandu-babel-before-save]" (file-name-nondirectory f)))
-    ))
+(defun nandu-ctrl-c-ctrl-c-hook ()
+  (message "%s" (org-element-context))
+  )
+
 
 (defun nandu-babel-delete ()
   (interactive)
-  (cond ((org-babel-when-in-src-block)
-         (when (org-babel-where-is-src-block-result)
-           ;; (nandu-babel--delete-result-file)
-           (org-babel-remove-result))
-         (let ((el (org-element-at-point)))
-           (delete-region (org-element-property :begin el) (org-element-property :end el)))
-        (goto-char (org-babel-previous-src-block)))
-        ((string= "drawer" (org-element-type (org-element-at-point)))
-         (goto-char (org-babel-previous-src-block))
-         ;; (nandu-babel--delete-result-file)
-         (org-babel-remove-result)
-         )))
+  (let ((el (org-element-at-point)))
+    (cond ((string= "src-block" (org-element-type el))
+           (if (org-babel-where-is-src-block-result)
+               (org-babel-remove-result)
+             (delete-region (org-element-property :begin el) (org-element-property :end el))
+             (goto-char (org-babel-previous-src-block))))
+          ((progn
+             (end-of-line)
+             (re-search-backward "^[ \t]*#\\+results:" (org-element-property :begin el) t))
+           (goto-char (org-babel-previous-src-block))
+           (org-babel-remove-result)))))
 
+  (defun nandu-babel-after-save ()
+    (let ((files (directory-files ob-ipython-resources-dir nil "^[^\\.]")))
+      (org-with-wide-buffer
+       (org-element-map (org-element-parse-buffer) 'link
+         (lambda (el)
+           (when (string= 'file (org-element-property :type el))
+             (let ((file (file-name-base (org-element-property :path el))))
+               (setq files (-remove (lambda (f) (string-match-p file f)) files))
+               )))))
+      (dolist (f files)
+        (delete-file (expand-file-name f ob-ipython-resources-dir) t)
+        (message "File %s deleted [nandu-babel-before-save]" (file-name-nondirectory f)))
+      ))
+
+  ;; obsolete
+  (defun nandu-babel--delete-result-file ()
+    (save-excursion
+      (goto-char (org-element-property :end (org-element-at-point)))
+      (when-let* ((el (org-element-at-point))
+                  (begin (org-element-property :contents-begin el))
+                  (end (org-element-property :contents-end el)))
+        (goto-char begin)
+        (while (< (point) end)
+          (let ((ctxt (org-element-context)))
+            (when (string= "file" (org-element-property :type ctxt))
+              (let ((file (file-name-sans-extension (org-element-property :path ctxt))))
+                (dolist (f (file-expand-wildcards (concat file "*")))
+                  (delete-file f t)
+                  (message "File %s deleted [nandu-babel]" f))
+                )))
+          (forward-line 1)
+          ))))
+  
 
 ;; FONT LOCK MODE
 ;; ==============
@@ -212,6 +215,8 @@
 
 ;; HOOKS
 ;; =====
+;; https://orgmode.org/worg/doc.html
+;; NOTE: add-hook does not add a hook multiple times and remove-hook does nothing if the hook is not present
 
 (defun nandu-babel-after-execute-hook ()
   (remove-hook 'org-babel-after-execute-hook 'nandu-babel-after-execute-hook)
@@ -227,7 +232,7 @@
                     (file-name-as-directory
                      (expand-file-name
                       (file-name-base (buffer-file-name)) (concat encl res_dir)))))
-    (error (message "nandu-org-mode-hook: %s" (error-message-string err))))
+    (error (message "error [nandu-org-mode-hook]: %s" (error-message-string err))))
   (add-hook 'after-save-hook 'nandu-babel-after-save t t)
   (message "NANDO org mode hook"))
 
