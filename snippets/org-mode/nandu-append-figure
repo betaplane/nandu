@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: nandu append figure
+# binding: s-<return>
+# type: command
+# --
+(nandu-append-figure)

@@ -1,9 +1,9 @@
 # -*- mode: snippet -*-
-# name: ob-ipython shift return
+# name: nandu shift return
 # binding: S-<return>
 # condition: (not (org-at-table-p))
 # type: command
 # --
 ; (when (not (member "silent" (assoc :result-params (nth 2 (org-babel-get-src-block-info)))))
 ;   (add-hook 'org-babel-after-execute-hook 'nandu-babel-after-execute-hook))
-(nandu--ob-ipython-shift-return t)
+(nandu--shift-return t)

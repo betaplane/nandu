@@ -84,12 +84,17 @@
 
 
 (defun nandu-append-figure ()
+  "Execute a matplotlib.pyplot.savefig on the current figure in the `ob-ipython-resources-dir' directory and append the link/overlay to the current src block. The file will be named according to the :savefig header param, or randomly if that isn't present."
   (interactive)
   (let* ((args '((:session . nil)))
-        (file_name (cdr (assoc :savefig (nth 2 (org-babel-get-src-block-info)))))
+        (file_name (alist-get :savefig (nth 2 (org-babel-get-src-block-info))))
         (res_dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir))
-        (path (expand-file-name file_name res_dir))
-        (cmd (format "plt.gcf().savefig('%s')" path)))
+        (cmd nil))
+    (if file_name
+        (let ((path (expand-file-name file_name res_dir)))
+          (setq cmd (format "plt.gcf().savefig('%s')" path)))
+      (let ((path (make-temp-name res_dir)))
+        (setq cmp (format "plt.gcd().savefig('%s', format='png')"))))
     (org-babel-execute:ipython cmd args)
     (org-babel-insert-result (format "[[file:%s]]" path) '("raw" "replace"))
     (org-display-inline-images)))
@@ -110,18 +115,26 @@
 ;; FUNCTIONS (FOR KEY BINDINGS / SNIPPETS)
 ;; =======================================
 
-(defun nandu--ob-ipython-shift-return (&optional ctrl-c)
+(defun nandu--shift-return (&optional ctrl-c)
+  "\
+Supposed behavior: 1) in src block without (:results . \"silent\") in :result-params
+                   execute src block, then append new empty one after results
+                   2) in src block with (:results . \"silent\") in :result-params
+                   only execute
+                   3) after src block
+                   only insert
+                   4) on src block with existing #+RESULTS: or on #+RESULTS: block
+                   only insert, after results
+
+Variable of interest: `nandu-post-result-lines' has the number of empty lines to leave after src blocks or results."
   (catch :ctrl
     (let* ((pos (point-at-bol))
            (el (org-element-at-point))
            (blank (org-element-property :post-blank el))
            (fat (- nandu-post-result-lines blank)))
       (when (string= "src-block" (org-element-type el))
-        (when (member "silent"
-                      (alist-get :result-params (nth 2 (org-babel-get-src-block-info))))
-          (org-ctrl-c-ctrl-c)
-          (throw :ctrl t))
-        (goto-char (org-element-property :end el)))
+        (goto-char (org-element-property :end el))
+        (setq blank (- (count-lines 1 (point-at-bol)) blank (count-lines 1 pos))))
       (let ((el (org-element-at-point))
             (case-fold-search t))
         (cond ((progn
@@ -133,11 +146,14 @@
               ((and ctrl-c (> blank 0))
                (goto-char pos)
                (org-ctrl-c-ctrl-c)
-               (nandu--ob-ipython-shift-return)
+               (when (not
+                      (member "silent"
+                                  (alist-get :result-params (nth 2 (org-babel-get-src-block-info)))))
+                 (nandu--ob-ipython-shift-return))
                (throw :ctrl t))))
       (forward-line (min 0 fat))
       (newline (max 0 fat)))
-    (yas-expand-snippet (yas-lookup-snippet "ob-ipython source block"))))
+    (yas-expand-snippet (yas-lookup-snippet "org-babel source block"))))
 
 
 (defun nandu-babel-delete ()
