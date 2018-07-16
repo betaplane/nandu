@@ -84,20 +84,33 @@
 
 
 (defun nandu-append-figure ()
-  "Execute a matplotlib.pyplot.savefig on the current figure in the `ob-ipython-resources-dir' directory and append the link/overlay to the current src block. The file will be named according to the :savefig header param, or randomly if that isn't present."
+  "\
+Execute a matplotlib.pyplot.savefig on the current figure in the `ob-ipython-resources-dir' directory and append the link/overlay to the current src block. The file will be named according to the :savefig header param, or randomly if that isn't present.
+
+:savefig should either be given a full filename with extension (e. g. \"image.png\"), or just the extension (e. g. \"png\"), in which case a random name is created also.
+
+The :results header is handed over to `org-babel-insert-result'."
   (interactive)
-  (let* ((args '((:session . nil)))
-        (file_name (alist-get :savefig (nth 2 (org-babel-get-src-block-info))))
+  (let* ((o-args '((:session . nil)))
+        (info (nth 2 (org-babel-get-src-block-info)))
         (res_dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir))
-        (cmd nil))
-    (if file_name
-        (let ((path (expand-file-name file_name res_dir)))
-          (setq cmd (format "plt.gcf().savefig('%s')" path)))
-      (let ((path (make-temp-name res_dir)))
-        (setq cmp (format "plt.gcd().savefig('%s', format='png')"))))
-    (org-babel-execute:ipython cmd args)
-    (org-babel-insert-result (format "[[file:%s]]" path) '("raw" "replace"))
+        (ext "png")
+        (path nil))
+    (catch :im_format
+      (when-let ((file_name (alist-get :savefig info)))
+        (setq ext (split-string file_name "\\."))
+        (if (cdr ext)
+            (progn
+              (setq path (expand-file-name file_name res_dir))
+              (throw :im_format t))
+          (setq ext (car ext))))
+      (setq path (concat (make-temp-name (file-name-as-directory res_dir)) "." ext)))
+    (let ((cmd (format "plt.gcf().savefig('%s')" path)))
+      (org-babel-execute:ipython cmd o-args))
+    (org-babel-insert-result (format "[[file:%s]]" path)
+                               (alist-get :result-params info))
     (org-display-inline-images)))
+
 
 ;; possibly to parse header arguments and hand to python by expanding the source
 ;; this will be necessary to have a possible change to the resources_dir if multiple different org files share the same kernel
@@ -115,7 +128,7 @@
 ;; FUNCTIONS (FOR KEY BINDINGS / SNIPPETS)
 ;; =======================================
 
-(defun nandu--shift-return (&optional ctrl-c)
+(defun nandu-shift-return (&optional ctrl-c)
   "\
 Supposed behavior: 1) in src block without (:results . \"silent\") in :result-params
                    execute src block, then append new empty one after results
@@ -149,7 +162,7 @@ Variable of interest: `nandu-post-result-lines' has the number of empty lines to
                (when (not
                       (member "silent"
                                   (alist-get :result-params (nth 2 (org-babel-get-src-block-info)))))
-                 (nandu--ob-ipython-shift-return))
+                 (nandu-shift-return))
                (throw :ctrl t))))
       (forward-line (min 0 fat))
       (newline (max 0 fat)))
@@ -157,6 +170,14 @@ Variable of interest: `nandu-post-result-lines' has the number of empty lines to
 
 
 (defun nandu-babel-delete ()
+  "\
+Supposed behavior: 1) on results paragraph
+                   remove results
+                   2) on src block:
+                      a) if results present
+                      remove results
+                      b) if no results present
+                      remove src block"
   (interactive)
   (let ((el (org-element-at-point)))
     (cond ((string= "src-block" (org-element-type el))
@@ -275,7 +296,7 @@ Variable of interest: `nandu-post-result-lines' has the number of empty lines to
 ;; currently not used - maybe necessary for async calls...
 (defun nandu-babel-after-execute-hook ()
   (remove-hook 'org-babel-after-execute-hook 'nandu-babel-after-execute-hook)
-  (nandu--ob-ipython-shift-return))
+  (nandu-shift-return))
 
 ;; gets called quite frequently in org-mode (not only at start)
 ;; therefore the condition-case

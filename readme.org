@@ -1,0 +1,14 @@
+* Emacs org-babel and python
+** Notes
+*** jupyter settings affecting temp .png generation when ~plt.ioff()~
+**** http://jupyter-console.readthedocs.io/en/latest/config_options.html
+**** ZMQTerminalInteractiveShell.image_handler: 'tempfile'
+**** ZMQTerminalInteractiveShell.tempfile_image_handler: [...]
+**** default is 'PIL' which opens Preview.app and deletes tempfile
+*** closing of fig handles relevant only in ~%matplotlib inline~ mode
+**** InlineBackend.close_figures = False
+** use
+   - use simply the interactive mode, with ~%matplotlib inline~
+   - evoke ~nandu-append-figure~ (s-<return>)
+   - in case the figure gets squished due to screen dimensions, use ~plt.switch_backend('agg')~ on the python side and re-execute, followed by ~nandu-append-figure~
+     - switch back with ~%matplotlib inline~
