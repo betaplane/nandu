@@ -12,3 +12,8 @@
    - evoke ~nandu-append-figure~ (s-<return>)
    - in case the figure gets squished due to screen dimensions, use ~plt.switch_backend('agg')~ on the python side and re-execute, followed by ~nandu-append-figure~
      - switch back with ~%matplotlib inline~
+** todo
+*** TODO nandu save buffer needs to test if directory is present and if file contains any file links
+**** maybe enable save-hook only when the first image is added
+**** maintain an buffer-local images list like the overlay one and check against if after saving
+*** TODO check why org-default-notes-file doesn't take
