@@ -89,13 +89,18 @@ Execute a matplotlib.pyplot.savefig on the current figure in the `ob-ipython-res
 
 :savefig should either be given a full filename with extension (e. g. \"image.png\"), or just the extension (e. g. \"png\"), in which case a random name is created also.
 
-The :results header is handed over to `org-babel-insert-result'."
+The :results header is handed over to `org-babel-insert-result'.
+
+An optional :style header can give the name of a style with which to print the figure to hardcopy."
   (interactive)
   (let* ((o-args '((:session . nil)))
-        (info (nth 2 (org-babel-get-src-block-info)))
-        (res_dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir))
-        (ext "png")
-        (path nil))
+         (info (or (nth 2 (org-babel-get-src-block-info))
+                   (org-babel-parse-header-arguments
+                    (org-element-property :end-header (org-element-at-point)))))
+         (res_dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir))
+         (ext "png")
+         (path nil)
+         (result-params '("replace" "raw")))
     (catch :im_format
       (when-let ((file_name (alist-get :savefig info)))
         (setq ext (split-string file_name "\\."))
@@ -103,12 +108,17 @@ The :results header is handed over to `org-babel-insert-result'."
             (progn
               (setq path (expand-file-name file_name res_dir))
               (throw :im_format t))
-          (setq ext (car ext))))
-      (setq path (concat (make-temp-name (file-name-as-directory res_dir)) "." ext)))
-    (let ((cmd (format "plt.gcf().savefig('%s')" path)))
+          (setq ext (car ext)))) ;; when-let
+      (setq path (concat (make-temp-name (file-name-as-directory res_dir)) "." ext))) ;; end catch
+    (let ((cmd (format "plt.gcf().savefig('%s'); plt.close()" path)))
+      (when-let* ((style (alist-get :style info))
+                  (mplstyle (or (car (directory-files nandu-mpl-styles-directory t style))
+                                style)))
+        (setq cmd (format "with plt.style.context('%s'):\n\t%s" mplstyle cmd)))
       (org-babel-execute:ipython cmd o-args))
-    (org-babel-insert-result (format "[[file:%s]]" path)
-                               (alist-get :result-params info))
+    (when-let ((results (alist-get :results info)))
+      (setq result-params (cl-union (split-string results) result-params)))
+    (org-babel-insert-result (format "[[file:%s]]" path) result-params)
     (org-display-inline-images)))
 
 
@@ -145,12 +155,11 @@ Variable of interest: `nandu-post-result-lines' has the number of empty lines to
            (el (org-element-at-point))
            (blank (org-element-property :post-blank el))
            (fat (- nandu-post-result-lines blank)))
-      (when (string= "src-block" (org-element-type el))
+      (when (member (org-element-type el) '(src-block, babel-call))
         (goto-char (org-element-property :end el))
         (setq blank (- (count-lines 1 (point-at-bol)) blank (count-lines 1 pos))))
-      (let ((el (org-element-at-point))
-            (case-fold-search t))
-        (cond ((progn
+      (let ((el (org-element-at-point)))
+        (cond ((let ((case-fold-search t))
                  (end-of-line)
                  (re-search-backward "^[ \t]*#\\+results:" (org-element-property :begin el) t))
                (goto-char (org-element-property :end el))
@@ -179,32 +188,37 @@ Supposed behavior: 1) on results paragraph
                       b) if no results present
                       remove src block"
   (interactive)
-  (let ((el (org-element-at-point)))
-    (cond ((string= "src-block" (org-element-type el))
+  (let ((el (org-element-at-point))
+        (elements '(src-block babel-call)))
+    (cond ((member (org-element-type el) elements)
            (if (org-babel-where-is-src-block-result)
                (org-babel-remove-result)
              (delete-region (org-element-property :begin el) (org-element-property :end el))
              (goto-char (org-babel-previous-src-block))))
-          ((progn
+          ((let ((case-fold-search t))
              (end-of-line)
              (re-search-backward "^[ \t]*#\\+results:" (org-element-property :begin el) t))
-           (goto-char (org-babel-previous-src-block))
-           (org-babel-remove-result)))))
+           (backward-char)
+           (let ((el (org-element-at-point)))
+            (when (member (org-element-type el) elements)
+              (goto-char (org-element-property :begin el))
+              (org-babel-remove-result)))))))
 
 (defun nandu-babel-after-save ()
-  (let* ((res_dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir))
-         (files (directory-files res_dir nil "^[^\\.]")))
-    (org-with-wide-buffer
-     (org-element-map (org-element-parse-buffer) 'link
-       (lambda (el)
-         (when (string= 'file (org-element-property :type el))
-           (let ((file (file-name-base (org-element-property :path el))))
-             (setq files (-remove (lambda (f) (string-match-p file f)) files))
-             )))))
-    (dolist (f files)
-      (delete-file (expand-file-name f res_dir) t)
-      (message "File %s deleted [nandu-babel-before-save]" (file-name-nondirectory f)))
-    ))
+  (let ((res_dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir)))
+    (when (file-directory-p res_dir)
+      (let ((files (directory-files res_dir nil "^[^\\.]")))
+        (org-with-wide-buffer
+         (org-element-map (org-element-parse-buffer) 'link
+           (lambda (el)
+             (when (string= 'file (org-element-property :type el))
+               (let ((file (file-name-base (org-element-property :path el))))
+                 (setq files (-remove (lambda (f) (string-match-p file f)) files))
+                 )))))
+        (dolist (f files)
+          (delete-file (expand-file-name f res_dir) t)
+          (message "File %s deleted [nandu-babel-before-save]" (file-name-nondirectory f)))
+    ))))
 
 ;; obsolete
 (defun nandu-babel--delete-result-file ()
@@ -326,3 +340,32 @@ Supposed behavior: 1) on results paragraph
   (yas-global-mode t)
   (global-company-mode t)
   (global-visual-line-mode t))
+
+
+(defun nandu-org-walker (el)
+    (when (string= "headline" (car el))
+      (let ((children (mapcar 'nandu-org-walker (nthcdr 2 el))))
+        (or (remove nil children) ;; because of this, needs mapcar not mapc!
+            (cons (org-element-property :end el) (org-element-property :raw-value el))))))
+
+(defun nandu-insert-into-leaves (re)
+  "Insert text at the end of each leave of an org-mode subtree.
+
+Use: 1) Mark a region of text to be copied. The region can contain the special symbol ~{}~ to be replaced with the text of the heading under which it is being inserted
+     2) When prompted, enter search string for which all headings only will be searched.
+
+The text, with expansion of the headline if applicable, will be inserted at the :end of each paragraph corresponding to a 'leave' heading, i. e. one without any subheadings under it.
+"
+  (interactive "ssearch string: ")
+  (let* ((text (buffer-substring-no-properties (point) (mark)))
+         (ast (org-element-map (org-element-parse-buffer) 'headline
+                (lambda (el)
+                  (let ((val (org-element-property :raw-value el)))
+                    (when (string-match-p re val) el)))))
+         (walk (mapcar 'nandu-org-walker ast)))
+    (dolist (el (--sort (> (car it) (car other)) (-flatten walk)))
+      (let* ((text (replace-regexp-in-string "[^\\]{}" (cdr el) text))
+             (text (replace-regexp-in-string "\\\\{\\\\}" "{}" text)))
+        (save-excursion
+          (goto-char (car el))
+          (insert text))))))

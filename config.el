@@ -1,9 +1,11 @@
 (defvar nandu-image-background-color nil "If not `nil', set the ImageMagick :background parameter of images in overlays to this color.")
 (defvar nandu-post-result-lines 2 "The number of empty lines between then end of a src block or results and a new src block inserted via nandu-shift-return.")
 (defvar nandu-layer-directory (file-name-directory (symbol-file 'nandu-shift-return)) "The directory containing all Nandu files.")
-(defvar nandu-mpl-styles-directory (expand-file-name "mpl_configdir" nandu-layer-directory) "The directory containing style sheets for matplotlib.")
+(defvar nandu-mpl-styles-directory (expand-file-name "stylelib" nandu-layer-directory) "The directory containing style sheets for matplotlib.")
 
-
+;; there is a bug in org currently with this - it just can't be set
+;; https://github.com/syl20bnr/spacemacs/issues/9748
+;; (setq org-default-notes-file "~/Dropbox/org/random.org")
 (with-eval-after-load 'org
   (setq org-directory "~/Dropbox/org")
   (setq org-agenda-files
@@ -12,7 +14,6 @@
   (setq org-refile-targets
         '((org-agenda-files :maxlevel . 4)
           ("~/Dropbox/org/random.org" :maxlevel . 4)))
-  (setq org-default-notes-file "~/Dropbox/org/random.org")
   (setq org-refile-use-outline-path 'file)
   (setq org-preview-latex-default-process 'dvisvgm)
   (org-babel-do-load-languages 'org-babel-load-languages '((ipython . t)))
@@ -22,6 +23,7 @@
     (kbd "DEL") 'nandu-babel-delete)
   ;; (advice-add 'org-display-inline-remove-overlay :before 'nandu-display-image-remove-overlay)
   ;; (advice-add 'ob-ipython--create-process :after 'nandu-create-process)
+  ;; (add-hook 'org-after-todo-state-change-hook (lambda () (message "%s" org-state)))
   )
 
 (with-eval-after-load 'company

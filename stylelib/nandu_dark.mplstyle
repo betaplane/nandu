@@ -1,8 +1,9 @@
 axes.edgecolor: w
 xtick.color: w
 ytick.color: w
-# axes.facecolor: k
-# figure.facecolor: k
+# axes.facecolor: none
+axes.labelcolor: w
+figure.facecolor: none
 figure.dpi: 200
 savefig.bbox: tight
 savefig.dpi: figure
