@@ -5,13 +5,13 @@
 
 ;; this actually gives the functions names that appear in the ivy-interface
 (defmacro nandu-open-keys (key fname)
-  (let ((f (or (and (file-directory-p fname) "org-directory")
+  (let ((f (or (and (file-directory-p fname) (intern "nandu-open:org-directory"))
                (intern (concat "nandu-open:" (file-name-nondirectory fname))))))
     `(progn
       (defun ,f ()
         (interactive)
-        (if (string= "org-directory" f)
-            (dired fname)
+        (if (file-directory-p ,fname)
+            (dired ,fname)
           (find-file ,fname)))
       (spacemacs/set-leader-keys ,key ',f))))
 

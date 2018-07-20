@@ -10,7 +10,8 @@
   (setq org-directory "~/Dropbox/org")
   (setq org-agenda-files
         '("~/Dropbox/org/work.org"
-          "~/Dropbox/org/personal.org"))
+          "~/Dropbox/org/personal.org"
+          "~/Dropbox/org/refile-beorg.org"))
   (setq org-refile-targets
         '((org-agenda-files :maxlevel . 4)
           ("~/Dropbox/org/random.org" :maxlevel . 4)))
