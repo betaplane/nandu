@@ -279,11 +279,26 @@ Supposed behavior: 1) on results paragraph
           (overlay-put nanov 'face `(:background ,nandu-image-background-color))))))
     (forward-line 1)))
 
+(defun nandu-display-func-src (limit)
+  (when (re-search-forward "\\$ff(\\(.*\\))" limit)
+    (let* ((func (intern (match-string 1)))
+           (el (org-element-context))
+           (beg (org-element-property :begin el))
+           (end (org-element-property :end el))
+           (ovtext nil))
+      (save-window-excursion
+        (find-function func)
+        (set-mark (point))
+        (forward-sexp)
+        (setq ovtext (buffer-substring (mark) (point)))
+        (kill-buffer-if-not-modified))
+      (put-text-property beg end 'display (format "#+BEGIN_EXAMPLE\n%s\n#+END_EXAMPLE" ovtext)))))
+
 
 ;; ADVICE
 ;; ======
 
-;; this function gets advised :befor org-display-image-remove-overlay, which is called by
+;; this function gets advised :before org-display-image-remove-overlay, which is called by
 ;; modification-hooks for the image overlay
 ;; it causes image files to be deleted if the image overlay is removed
 (defun nandu-display-image-remove-overlay (ov after _beg _end &optional _len)

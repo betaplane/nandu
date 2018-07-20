@@ -24,6 +24,8 @@
   ;; (advice-add 'org-display-inline-remove-overlay :before 'nandu-display-image-remove-overlay)
   ;; (advice-add 'ob-ipython--create-process :after 'nandu-create-process)
   ;; (add-hook 'org-after-todo-state-change-hook (lambda () (message "%s" org-state)))
+  ;; (font-lock-add-keywords 'org-mode '(nandu-display-func-src))
+  (setq org-fontify-quote-and-verse-blocks t)
   )
 
 (with-eval-after-load 'company
