@@ -8,13 +8,10 @@
 ;; (setq org-default-notes-file "~/Dropbox/org/random.org")
 (with-eval-after-load 'org
   (setq org-directory "~/Dropbox/org")
-  (setq org-agenda-files
-        '("~/Dropbox/org/work.org"
-          "~/Dropbox/org/personal.org"
-          "~/Dropbox/org/refile-beorg.org"))
-  (setq org-refile-targets
-        '((org-agenda-files :maxlevel . 4)
-          ("~/Dropbox/org/random.org" :maxlevel . 4)))
+  (setq org-agenda-files (mapcar #'(lambda (f) (expand-file-name f org-directory))
+                                 '("work.org" "personal.org" "refile-beorg.org" "random.org")))
+  (setq org-refile-targets #'(mapcar (lambda (f) (((expand-file-name f org-directory) :maxlevel . 4)))
+        '(org-agenda-files "linux.org" "betaplane.org")))
   (setq org-refile-use-outline-path 'file)
   (setq org-preview-latex-default-process 'dvisvgm)
   (org-babel-do-load-languages 'org-babel-load-languages '((ipython . t)))
@@ -54,6 +51,8 @@
 ;; (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
 
 (add-hook 'org-mode-hook 'nandu-org-mode-hook)
+(add-hook 'org-export-before-processing-hook 'nandu-org-export-before-processing-hook)
+
 
 (add-hook 'org-font-lock-set-keywords-hook 'nandu-font-lock-set-keywords-hook)
 

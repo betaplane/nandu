@@ -357,6 +357,9 @@ Supposed behavior: 1) on results paragraph
   (global-visual-line-mode t))
 
 
+;; Org-mode functions
+;; ==================
+
 (defun nandu-org-walker (el)
     (when (string= "headline" (car el))
       (let ((children (mapcar 'nandu-org-walker (nthcdr 2 el))))
@@ -384,3 +387,54 @@ The text, with expansion of the headline if applicable, will be inserted at the 
         (save-excursion
           (goto-char (car el))
           (insert text))))))
+
+;; Jekyll
+;; ======
+
+(defun nandu-export-html ()
+  (interactive)
+  (let* ((jekyll-dir nil)
+        (head (org-get-heading))
+        (title (replace-regexp-in-string
+                "\\[\\[[^\]]+\\]\\[\\([^\]]+\\)\\]\\]" "\\1" head))
+        (fname (replace-regexp-in-string "[:=\(\)\?]" "" title))
+        (fname (replace-regexp-in-string "[[:blank:]]" "-" title)))
+    (org-element-map (org-element-parse-buffer) 'keyword
+      (lambda (el)
+        (when (string= "JEKYLL_DIR" (upcase (org-element-property :key el)))
+          (setq jekyll-dir (org-element-property :value el)))))
+    (org-html-export-as-html nil t t t)
+    (with-current-buffer "*Org HTML Export*"
+      (beginning-of-buffer)
+      (insert "---\n")
+      (insert (format "title: %s\n" title))
+      (insert "layout: post\n")
+      (insert "---\n")
+      (write-file (expand-file-name
+                   (format "%s-%s.html" (format-time-string "%Y-%m-%d") fname) jekyll-dir)))))
+
+;; pre-processes a #+DEFUN keyword by looking for the function and replacing the line in the buffer
+(defun nandu-org-export-before-processing-hook (backend)
+  (when (org-export-derived-backend-p backend 'html)
+    (org-element-map (org-element-parse-buffer) 'keyword
+      (lambda (el)
+        (let ((key (upcase (org-element-property :key el))))
+          (when (string= key "DEFUN")
+            (let* ((v (org-element-property :value el))
+                   (beg (org-element-property :begin el))
+                   (end (org-element-property :end el))
+                   (l (split-string v))
+                   (text nil)
+                   (ff (find-function-noselect (intern (car l)))))
+              (save-current-buffer
+                (set-buffer (car ff))
+                (forward-sexp)
+                (setq text (buffer-substring-no-properties (cdr ff) (point))))
+              (save-excursion
+                (delete-region beg end)
+                (goto-char beg)
+                (insert "#+begin_export html\n")
+                (insert (format "{%% highlight %s %%}{%% raw %%}" (nth 1 l)))
+                (insert text)
+                (insert "{% endraw %}{% endhighlight %}\n")
+                (insert "\n#+end_export\n")))))))))
