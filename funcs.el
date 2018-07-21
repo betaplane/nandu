@@ -84,14 +84,19 @@
 
 
 (defun nandu-append-figure ()
-  "\
-Execute a matplotlib.pyplot.savefig on the current figure in the `ob-ipython-resources-dir' directory and append the link/overlay to the current src block. The file will be named according to the :savefig header param, or randomly if that isn't present.
+  "Save current matplotlib figure to file and append link as result.
 
-:savefig should either be given a full filename with extension (e. g. \"image.png\"), or just the extension (e. g. \"png\"), in which case a random name is created also.
+Execute a matplotlib.pyplot.savefig on the current figure in the
+`ob-ipython-resources-dir' directory and append the link/overlay
+to the current src block. The file will be named according to the
+:savefig header param, or randomly if that isn't present.
+:savefig should either be given a full filename with
+extension (e. g. \"image.png\"), or just the extension (e. g.
+\"png\"), in which case a random name is created also. The
+:results header of the src block is handed over to
+`org-babel-insert-result'. An optional :style header can give the
+name of a style with which to print the figure to hardcopy."
 
-The :results header is handed over to `org-babel-insert-result'.
-
-An optional :style header can give the name of a style with which to print the figure to hardcopy."
   (interactive)
   (let* ((o-args '((:session . nil)))
          (info (or (nth 2 (org-babel-get-src-block-info))
@@ -394,24 +399,31 @@ The text, with expansion of the headline if applicable, will be inserted at the 
 (defun nandu-export-html ()
   (interactive)
   (let* ((jekyll-dir nil)
-        (head (org-get-heading))
-        (title (replace-regexp-in-string
-                "\\[\\[[^\]]+\\]\\[\\([^\]]+\\)\\]\\]" "\\1" head))
-        (fname (replace-regexp-in-string "[:=\(\)\?]" "" title))
-        (fname (replace-regexp-in-string "[[:blank:]]" "-" title)))
+         (el (org-element-at-point))
+         (head (org-get-heading))
+         (title (replace-regexp-in-string
+                 "\\[\\[[^\]]+\\]\\[\\([^\]]+\\)\\]\\]" "\\1" head))
+         (fname (replace-regexp-in-string "[:=\(\)\?]" "" title))
+         (fname (replace-regexp-in-string "[[:blank:]]" "-" title))
+         (time (format-time-string "%Y-%m-%d")))
     (org-element-map (org-element-parse-buffer) 'keyword
       (lambda (el)
         (when (string= "JEKYLL_DIR" (upcase (org-element-property :key el)))
           (setq jekyll-dir (org-element-property :value el)))))
-    (org-html-export-as-html nil t t t)
+    (if-let* ((ts (org-element-property :scheduled el))
+                (year (org-element-property :year-start el))
+                (month (org-element-property :month-start el))
+                (day (org-element-property :day-start el)))
+        (setq time (format "%d-%02d-%02d" year month day))
+      (org-schedule nil time))
+    (org-html-export-as-html nil t nil t)
     (with-current-buffer "*Org HTML Export*"
       (beginning-of-buffer)
       (insert "---\n")
       (insert (format "title: %s\n" title))
       (insert "layout: post\n")
       (insert "---\n")
-      (write-file (expand-file-name
-                   (format "%s-%s.html" (format-time-string "%Y-%m-%d") fname) jekyll-dir)))))
+      (write-file (expand-file-name (format "%s-%s.html" time fname) jekyll-dir)))))
 
 ;; pre-processes a #+DEFUN keyword by looking for the function and replacing the line in the buffer
 (defun nandu-org-export-before-processing-hook (backend)

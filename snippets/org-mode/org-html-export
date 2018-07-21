@@ -1,0 +1,9 @@
+# -*- mode: snippet -*-
+# name: org html export
+# key: <r
+# --
+#+BEGIN_EXPORT html
+{% highlight ${1:$$(yas-choose-value "python" "scheme" "make")} %}{% raw %}
+`yas-selected-text`$0
+{% endraw %}{% endhighlight %}
+#+END_EXPORT
