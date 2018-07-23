@@ -400,20 +400,30 @@ The text, with expansion of the headline if applicable, will be inserted at the 
   (interactive)
   (let* ((jekyll-dir nil)
          (el (org-element-at-point))
-         (head (org-get-heading))
+         (head (org-get-heading t t t t))
          (title (replace-regexp-in-string
                  "\\[\\[[^\]]+\\]\\[\\([^\]]+\\)\\]\\]" "\\1" head))
          (fname (replace-regexp-in-string "[:=\(\)\?]" "" title))
          (fname (replace-regexp-in-string "[[:blank:]]" "-" title))
-         (time (format-time-string "%Y-%m-%d")))
-    (org-element-map (org-element-parse-buffer) 'keyword
+         (time (format-time-string "%Y-%m-%d"))
+         (tags (org-get-tags))
+         (categories nil))
+    ;; CATEGORIES
+    ;; everything between levels 2 and the headline of the post is a "category"
+    ;; level 1 is any heading
+    (save-excursion
+      (while (< 2 (org-element-property :level (org-element-at-point)))
+        (org-up-heading-safe)
+        (setq categories (cons (org-get-heading t t t t) categories))))
+    ;; #+JEKYLL_DIR: should set the directory to which to export
+    (org-element-map (org-element-parse-buffer 'greater-element) 'keyword
       (lambda (el)
         (when (string= "JEKYLL_DIR" (upcase (org-element-property :key el)))
           (setq jekyll-dir (org-element-property :value el)))))
     (if-let* ((ts (org-element-property :scheduled el))
-                (year (org-element-property :year-start el))
-                (month (org-element-property :month-start el))
-                (day (org-element-property :day-start el)))
+                (year (org-element-property :year-start ts))
+                (month (org-element-property :month-start ts))
+                (day (org-element-property :day-start ts)))
         (setq time (format "%d-%02d-%02d" year month day))
       (org-schedule nil time))
     (org-html-export-as-html nil t nil t)
@@ -422,13 +432,17 @@ The text, with expansion of the headline if applicable, will be inserted at the 
       (insert "---\n")
       (insert (format "title: %s\n" title))
       (insert "layout: post\n")
+      (when categories
+        (insert (format "categories: [%s]\n" (string-join categories ", "))))
+      (when (not (string= "" (car tags)))
+        (insert (format "tags: [%s]\n" (string-join tags ", "))))
       (insert "---\n")
       (write-file (expand-file-name (format "%s-%s.html" time fname) jekyll-dir)))))
 
 ;; pre-processes a #+DEFUN keyword by looking for the function and replacing the line in the buffer
 (defun nandu-org-export-before-processing-hook (backend)
   (when (org-export-derived-backend-p backend 'html)
-    (org-element-map (org-element-parse-buffer) 'keyword
+    (org-element-map (org-element-parse-buffer 'element) 'keyword
       (lambda (el)
         (let ((key (upcase (org-element-property :key el))))
           (when (string= key "DEFUN")
