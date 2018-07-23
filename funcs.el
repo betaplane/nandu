@@ -98,29 +98,36 @@ extension (e. g. \"image.png\"), or just the extension (e. g.
 name of a style with which to print the figure to hardcopy."
 
   (interactive)
-  (let* ((o-args '((:session . nil)))
+  (let* ((babel-args '((:session . nil)))
          (info (or (nth 2 (org-babel-get-src-block-info))
                    (org-babel-parse-header-arguments
                     (org-element-property :end-header (org-element-at-point)))))
-         (res_dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir))
+         (res-dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir))
+;; default figure format
          (ext "png")
          (path nil)
+;; merge any result-params from the src block header with these
          (result-params '("replace" "raw")))
+
     (catch :im_format
       (when-let ((file_name (alist-get :savefig info)))
         (setq ext (split-string file_name "\\."))
         (if (cdr ext)
             (progn
-              (setq path (expand-file-name file_name res_dir))
+              (setq path (expand-file-name file_name res-dir))
               (throw :im_format t))
-          (setq ext (car ext)))) ;; when-let
-      (setq path (concat (make-temp-name (file-name-as-directory res_dir)) "." ext))) ;; end catch
+          (setq ext (car ext))))                                                       ;; when-let
+      (setq path (concat (make-temp-name (file-name-as-directory res-dir)) "." ext)))  ;; catch
+;; if plt.close() isn't called, the figures accumulate weirdness over time
+
     (let ((cmd (format "plt.gcf().savefig('%s'); plt.close()" path)))
+;; wrap call in a style context if :style is given
+;; the style is looked for first in nandu-mpl-styles-directory, then among the standard mpl styles
       (when-let* ((style (alist-get :style info))
-                  (mplstyle (or (car (directory-files nandu-mpl-styles-directory t style))
-                                style)))
+                  (mplstyle (or (car (directory-files nandu-mpl-styles-directory t style)) style)))
         (setq cmd (format "with plt.style.context('%s'):\n\t%s" mplstyle cmd)))
-      (org-babel-execute:ipython cmd o-args))
+      (org-babel-execute:ipython cmd babel-args))
+
     (when-let ((results (alist-get :results info)))
       (setq result-params (cl-union (split-string results) result-params)))
     (org-babel-insert-result (format "[[file:%s]]" path) result-params)
