@@ -150,7 +150,7 @@ name of a style with which to print the figure to hardcopy."
 ;; FUNCTIONS (FOR KEY BINDINGS / SNIPPETS)
 ;; =======================================
 
-(defun nandu-shift-return (&optional ctrl-c)
+(defun nandu-shift-return (&optional ctrl-c language)
   "\
 Supposed behavior: 1) in src block without (:results . \"silent\") in :result-params
                    execute src block, then append new empty one after results
@@ -166,7 +166,8 @@ Variable of interest: `nandu-post-result-lines' has the number of empty lines to
     (let* ((pos (point-at-bol))
            (el (org-element-at-point))
            (blank (org-element-property :post-blank el))
-           (fat (- nandu-post-result-lines blank)))
+           (fat (- nandu-post-result-lines blank))
+           (language (or (org-element-property :language el) language)))
       (when (member (org-element-type el) '(src-block, babel-call))
         (goto-char (org-element-property :end el))
         (setq blank (- (count-lines 1 (point-at-bol)) blank (count-lines 1 pos))))
@@ -183,11 +184,14 @@ Variable of interest: `nandu-post-result-lines' has the number of empty lines to
                (when (not
                       (member "silent"
                                   (alist-get :result-params (nth 2 (org-babel-get-src-block-info)))))
-                 (nandu-shift-return))
+                 (nandu-shift-return nil language))
                (throw :ctrl t))))
       (forward-line (min 0 fat))
       (newline (max 0 fat)))
-    (yas-expand-snippet (yas-lookup-snippet "org-babel source block"))))
+    (if language
+        (yas-expand-snippet
+         (format "#+begin_src %s :results raw :session\n$0\n#+end_src\n" language))
+    (yas-expand-snippet (yas-lookup-snippet "org-babel source block")))))
 
 
 (defun nandu-babel-delete ()
@@ -399,6 +403,12 @@ The text, with expansion of the headline if applicable, will be inserted at the 
         (save-excursion
           (goto-char (car el))
           (insert text))))))
+
+(defun nandu-link-jupyter2org ()
+  "Replace Jupyter link markup with org markup (for 1 match following point)."
+  (interactive)
+  (re-search-forward "\\[\\([^\]]+\\)](\\([^)]+\\))" nil t 1)
+  (replace-match "[[\\2][\\1]]"))
 
 ;; Jekyll
 ;; ======

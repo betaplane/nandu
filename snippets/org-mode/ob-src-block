@@ -3,7 +3,7 @@
 # key: ypy
 # type: snippet
 # --
-#+begin_src ${1:$$(yas-choose-value "ipython" "emacs-lisp")} :results ${2:$$(yas-choose-value "raw" "silent")} ${3:drawer} ${4::session}
+#+begin_src ${1:$$(yas-choose-value "ipython" "emacs-lisp")} :results ${2:$$(yas-choose-value "raw" "silent")} :session
 `yas-selected-text`$0
 #+end_src
 
