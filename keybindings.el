@@ -3,6 +3,7 @@
 (spacemacs/declare-prefix "o" "my own (nandu) menu")
 (spacemacs/declare-prefix "of" "org files")
 (spacemacs/declare-prefix "oz" "org-zotxt")
+(spacemacs/declare-prefix "os" "sphinx-doc")
 
 ;; this actually gives the functions names that appear in the ivy-interface
 (defmacro nandu-open-keys (key fname)
@@ -29,3 +30,10 @@
   (call-interactively 'org-zotxt-insert-reference-link))
 
 (spacemacs/set-leader-keys "ozi" 'nandu-insert-zotero)
+
+(defun nandu-sphinx-doc ()
+  (interactive)
+  (when (not sphinx-doc-mode) (sphinx-doc-mode t))
+  (call-interactively 'sphinx-doc))
+
+(spacemacs/set-leader-keys "osi" 'nandu-insert-zotero)
