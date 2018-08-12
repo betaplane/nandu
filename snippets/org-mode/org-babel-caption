@@ -1,5 +1,5 @@
 # -*- mode: snippet -*-
 # name: org-babel caption
-# key: cap
+# key: <p
 # --
 #+CAPTION: `yas-selected-text`$0

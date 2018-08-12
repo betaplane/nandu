@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: org mode label
+# key: <b
+# --
+#+LABEL: `yas-selected-text`$0

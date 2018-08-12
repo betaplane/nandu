@@ -10,3 +10,5 @@ savefig.bbox: tight
 savefig.dpi: figure
 savefig.facecolor: none
 savefig.edgecolor: none
+grid.color: w
+legend.edgecolor: w

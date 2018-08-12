@@ -57,6 +57,3 @@
 (add-hook 'org-font-lock-set-keywords-hook 'nandu-font-lock-set-keywords-hook)
 
 (add-hook 'after-init-hook 'nandu-after-init-hook)
-
-;; colors
-(setq evil-insert-state-cursor '(bar "magenta"))

@@ -156,7 +156,7 @@ Supposed behavior: 1) in src block without (:results . \"silent\") in :result-pa
                    execute src block, then append new empty one after results
                    2) in src block with (:results . \"silent\") in :result-params
                    only execute
-                   3) after src block
+                   3) after src block or *if a region is selected*
                    only insert
                    4) on src block with existing #+RESULTS: or on #+RESULTS: block
                    only insert, after results
@@ -374,7 +374,8 @@ Supposed behavior: 1) on results paragraph
 (defun nandu-after-init-hook ()
   (yas-global-mode t)
   (global-company-mode t)
-  (global-visual-line-mode t))
+  (global-visual-line-mode t)
+  (setq evil-insert-state-cursor '(bar "magenta")))
 
 
 ;; Org-mode functions
