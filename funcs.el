@@ -375,6 +375,8 @@ Supposed behavior: 1) on results paragraph
   (yas-global-mode t)
   (global-company-mode t)
   (global-visual-line-mode t)
+  ;; cursor color clashes with farmhouse theme
+  ;; gets reset if set earlier in the loading process
   (setq evil-insert-state-cursor '(bar "magenta")))
 
 
