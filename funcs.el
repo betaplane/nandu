@@ -102,7 +102,8 @@ name of a style with which to print the figure to hardcopy."
          (info (or (nth 2 (org-babel-get-src-block-info))
                    (org-babel-parse-header-arguments
                     (org-element-property :end-header (org-element-at-point)))))
-         (res-dir (concat ob-ipython-resources-dir (file-name-sans-extension (buffer-name))))
+         (res-dir (file-name-as-directory
+                   (concat ob-ipython-resources-dir (file-name-sans-extension (buffer-name)))))
 ;; default figure format
          (ext "png")
          (path nil)
@@ -117,7 +118,7 @@ name of a style with which to print the figure to hardcopy."
               (setq path (concat res-dir file_name))
               (throw :im_format t))
           (setq ext (car ext))))                                                       ;; when-let
-      (setq path (concat (make-temp-name (file-name-as-directory res-dir)) "." ext)))  ;; catch
+      (setq path (concat (make-temp-name res-dir) "." ext)))  ;; catch
 ;; if plt.close() isn't called, the figures accumulate weirdness over time
 
     (let ((cmd (format "plt.gcf().savefig('%s'); plt.close()" path)))
