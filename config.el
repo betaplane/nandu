@@ -16,7 +16,6 @@
   (setq org-preview-latex-default-process 'dvisvgm)
   (org-babel-do-load-languages 'org-babel-load-languages '((ipython . t)))
   ;;  (setq org-todo-keywords '((sequence "TODO" "|" "DONE")))
-  (setq org-image-actual-width 600) ;; needs maybe seperate setting by computer
   (evil-define-key 'normal org-mode-map
     (kbd "DEL") 'nandu-babel-delete)
   ;; (advice-add 'org-display-inline-remove-overlay :before 'nandu-display-image-remove-overlay)
@@ -29,14 +28,6 @@
 (with-eval-after-load 'company
 	(add-to-list 'company-backends 'company-ob-ipython)
   )
-
-;; apparently locate-library only works after loading of elpy
-;; the form `(... ,expr) means expr with comma before will be evaluated
-;; before inserting into the list
-(with-eval-after-load 'elpy
-  (setq yas-snippet-dirs `(,(expand-file-name "snippets" (file-name-directory (symbol-file 'nandu-org-mode-hook)))
-                           ,(expand-file-name "snippets" (file-name-directory (locate-library "elpy"))))
-        ))
 
 ;; for use with elpy
 (setq python-shell-interpreter "jupyter-console")

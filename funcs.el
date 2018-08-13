@@ -102,7 +102,7 @@ name of a style with which to print the figure to hardcopy."
          (info (or (nth 2 (org-babel-get-src-block-info))
                    (org-babel-parse-header-arguments
                     (org-element-property :end-header (org-element-at-point)))))
-         (res-dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir))
+         (res-dir (concat ob-ipython-resources-dir (file-name-sans-extension (buffer-name))))
 ;; default figure format
          (ext "png")
          (path nil)
@@ -114,7 +114,7 @@ name of a style with which to print the figure to hardcopy."
         (setq ext (split-string file_name "\\."))
         (if (cdr ext)
             (progn
-              (setq path (expand-file-name file_name res-dir))
+              (setq path (concat res-dir file_name))
               (throw :im_format t))
           (setq ext (car ext))))                                                       ;; when-let
       (setq path (concat (make-temp-name (file-name-as-directory res-dir)) "." ext)))  ;; catch
@@ -372,12 +372,18 @@ Supposed behavior: 1) on results paragraph
   )
 
 (defun nandu-after-init-hook ()
-  (yas-global-mode t)
   (global-company-mode t)
   (global-visual-line-mode t)
   ;; cursor color clashes with farmhouse theme
   ;; gets reset if set earlier in the loading process
-  (setq evil-insert-state-cursor '(bar "magenta")))
+  (setq evil-insert-state-cursor '(bar "magenta"))
+  ;; apparently locate-library only works after loading of elpy
+  ;; the form `(... ,expr) means expr with comma before will be evaluated
+  ;; before inserting into the list
+  (add-to-list 'yas-snippet-dirs (expand-file-name "snippets" (file-name-directory (symbol-file 'nandu-org-mode-hook))))
+  (add-to-list 'yas-snippet-dirs (expand-file-name "snippets" (file-name-directory (locate-library "elpy"))))
+  ;; needs to be enabled *after* adding to yas-snippet-dirs
+  (yas-global-mode t))
 
 
 ;; Org-mode functions

@@ -21,7 +21,7 @@
 (nandu-open-keys "ofp" "~/Dropbox/org/personal.org")
 (nandu-open-keys "ofw" "~/Dropbox/org/work.org")
 (nandu-open-keys "ofr" "~/Dropbox/org/random.org")
-(nandu-open-keys "ofl" "~/Dropbox/org/linux.org")
+(nandu-open-keys "ofc" "~/Dropbox/org/comp.org")
 (nandu-open-keys "ofb" "~/Dropbox/org/refile-beorg.org")
 
 (defun nandu-insert-zotero ()
