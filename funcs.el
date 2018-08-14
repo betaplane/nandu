@@ -110,6 +110,9 @@ name of a style with which to print the figure to hardcopy."
 ;; merge any result-params from the src block header with these
          (result-params '("replace" "raw")))
 
+    (when (not (file-directory-p res-dir))
+      (make-directory res-dir))
+
     (catch :im_format
       (when-let ((file_name (alist-get :savefig info)))
         (setq ext (split-string file_name "\\."))
