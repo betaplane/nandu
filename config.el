@@ -1,7 +1,7 @@
 (defvar nandu-image-background-color nil "If not `nil', set the ImageMagick :background parameter of images in overlays to this color.")
 (defvar nandu-post-result-lines 2 "The number of empty lines between then end of a src block or results and a new src block inserted via nandu-shift-return.")
 (defvar nandu-layer-directory (file-name-directory (symbol-file 'nandu-shift-return)) "The directory containing all Nandu files.")
-(defvar nandu-mpl-styles-directory (expand-file-name "stylelib" nandu-layer-directory) "The directory containing style sheets for matplotlib.")
+(defvar nandu-styles-directory (expand-file-name "stylelib" nandu-layer-directory) "The directory containing style sheets for matplotlib.")
 
 ;; there is a bug in org currently with this - it just can't be set
 ;; https://github.com/syl20bnr/spacemacs/issues/9748
@@ -23,6 +23,7 @@
   ;; (add-hook 'org-after-todo-state-change-hook (lambda () (message "%s" org-state)))
   ;; (font-lock-add-keywords 'org-mode '(nandu-display-func-src))
   (setq org-fontify-quote-and-verse-blocks t)
+  (setq org-export-use-babel nil) ;; don't execute src blocks when exporting org file
   )
 
 (with-eval-after-load 'company

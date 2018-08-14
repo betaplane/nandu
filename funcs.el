@@ -123,9 +123,9 @@ name of a style with which to print the figure to hardcopy."
 
     (let ((cmd (format "plt.gcf().savefig('%s'); plt.close()" path)))
 ;; wrap call in a style context if :style is given
-;; the style is looked for first in nandu-mpl-styles-directory, then among the standard mpl styles
+;; the style is looked for first in nandu-styles-directory, then among the standard mpl styles
       (when-let* ((style (alist-get :style info))
-                  (mplstyle (or (car (directory-files nandu-mpl-styles-directory t style)) style)))
+                  (mplstyle (or (car (directory-files nandu-styles-directory t style)) style)))
         (setq cmd (format "with plt.style.context('%s'):\n\t%s" mplstyle cmd)))
       (org-babel-execute:ipython cmd babel-args))
 
@@ -470,8 +470,8 @@ The text, with expansion of the headline if applicable, will be inserted at the 
       (insert "---\n")
       (write-file (expand-file-name (format "%s-%s.html" time fname) jekyll-dir)))))
 
-;; pre-processes a #+DEFUN keyword by looking for the function and replacing the line in the buffer
 (defun nandu-org-export-before-processing-hook (backend)
+  ;; pre-processes a #+DEFUN keyword by looking for the function and replacing the line in the buffer
   (when (org-export-derived-backend-p backend 'html)
     (org-element-map (org-element-parse-buffer 'element) 'keyword
       (lambda (el)
@@ -494,4 +494,19 @@ The text, with expansion of the headline if applicable, will be inserted at the 
                 (insert (format "{%% highlight %s %%}{%% raw %%}" (nth 1 l)))
                 (insert text)
                 (insert "{% endraw %}{% endhighlight %}\n")
-                (insert "\n#+end_export\n")))))))))
+                (insert "\n#+end_export\n"))))))))
+  ;; when org-export-use-babel is nil, src-block header args are not parsed
+  (when (org-export-derived-backend-p backend 'beamer)
+    (let ((src (org-element-map (org-element-parse-buffer 'element) 'src-block
+        (lambda (el)
+          (condition-case nil
+              (when-let* ((info (nth 2 (org-babel-get-src-block-info nil el)))
+                          (exp (downcase (alist-get :exports info)))
+                          (check (or (string= "none" exp) (string= "results" exp)))
+                          (beg (org-element-property :begin el))
+                          (end (org-element-property :end el)))
+                `(,beg . ,end))
+          (error nil))))))
+      (dolist (el (--sort (> (car it) (car other)) src))
+        (delete-region (car el) (cdr el)))))
+    )
