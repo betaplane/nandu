@@ -20,7 +20,7 @@
 
 (defun nandu/init-ivy-bibtex ()
   (use-package ivy-bibtex :defer t)
-  (setq bibtex-completion-bibliography (directory-files "~/Documents/code/notebooks" t ".*\.bib"))
+  (setq bibtex-completion-bibliography (directory-files "~/Dropbox/work/" t ".*\.bib"))
   (setq bibtex-completion-pdf-field "File")
   (setq ivy-re-builders-alist '((ivy-bibtex . ivy--regex-ignore-order)
                                 (t . ivy--regex-plus))))
