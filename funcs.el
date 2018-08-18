@@ -499,7 +499,8 @@ The text, with expansion of the headline if applicable, will be inserted at the 
                 (insert "{% endraw %}{% endhighlight %}\n")
                 (insert "\n#+end_export\n"))))))))
   ;; when org-export-use-babel is nil, src-block header args are not parsed
-  (when (org-export-derived-backend-p backend 'beamer)
+  (when (or (org-export-derived-backend-p backend 'beamer)
+            (org-export-derived-backend-p backend 'latex))
     (let ((src (org-element-map (org-element-parse-buffer 'element) 'src-block
         (lambda (el)
           (condition-case nil
