@@ -3,9 +3,9 @@
 # key: <C
 # --
 import os
-from traitlets.config.configurable import Configurable
+from traitlets.config import Application
 
-class $0(Configurable):
+class $0(Application):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.load_config_file(os.path.expanduser('~/Dropbox/work/config.py'))
