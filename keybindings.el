@@ -23,6 +23,10 @@
 (nandu-open-keys "ofr" "~/Dropbox/org/random.org")
 (nandu-open-keys "ofc" "~/Dropbox/org/comp.org")
 (nandu-open-keys "ofb" "~/Dropbox/org/refile-beorg.org")
+;; (nandu-open-keys "off" (gethash (system-name)
+;;                                 #s(hash-table size 2 test equal
+;;                                               data ("condor" "~/Documents/code/python/"
+;;                                                     "kiwi" "~/Documents/cezanne/python/"))))
 
 (defun nandu-insert-zotero ()
   (interactive)
@@ -36,4 +40,4 @@
   (when (not sphinx-doc-mode) (sphinx-doc-mode t))
   (call-interactively 'sphinx-doc))
 
-(spacemacs/set-leader-keys "osi" 'nandu-insert-zotero)
+(spacemacs/set-leader-keys "osi" 'nandu-sphinx-doc)
