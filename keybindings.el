@@ -23,10 +23,9 @@
 (nandu-open-keys "ofr" "~/Dropbox/org/random.org")
 (nandu-open-keys "ofc" "~/Dropbox/org/comp.org")
 (nandu-open-keys "ofb" "~/Dropbox/org/refile-beorg.org")
-;; (nandu-open-keys "off" (gethash (system-name)
-;;                                 #s(hash-table size 2 test equal
-;;                                               data ("condor" "~/Documents/code/python/"
-;;                                                     "kiwi" "~/Documents/cezanne/python/"))))
+(if (equal "condor" (system-name))
+    (nandu-open-keys "off" "~/Documents/code/python/")
+  (nandu-open-keys "off" "~/Documents/cezanne/python/"))
 
 (defun nandu-insert-zotero ()
   (interactive)
