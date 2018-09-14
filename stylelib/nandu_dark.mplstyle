@@ -3,6 +3,7 @@ xtick.color: w
 ytick.color: w
 axes.facecolor: none
 axes.labelcolor: w
+# axes.prop_cycle: cycler(color='Set2')
 text.color: w
 figure.facecolor: none
 figure.dpi: 200

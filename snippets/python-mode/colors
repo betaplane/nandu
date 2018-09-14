@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: colors
+# key: <col
+# --
+colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
