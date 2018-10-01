@@ -3,7 +3,7 @@
 # key: <app
 # --
 import os
-from traitlets.config import Application
+from traitlets.config import Application, Config
 from traitlets.config.loader import PyFileConfigLoader, ConfigFileNotFound
 from traitlets import Unicode
 
@@ -11,7 +11,8 @@ class $0(Application):
     config_file = Unicode('~/Dropbox/work/config.py').tag(config=True)
     def __init__(self, *args, config={}, **kwargs):
         try:
-            config = PyFileConfigLoader(os.path.expanduser(self.config_file)).load_config()
-            config.merge(config)
-        except ConfigFileNotFound: pass
-        super().__init__(config=config, **kwargs)
+            cfg = PyFileConfigLoader(os.path.expanduser(self.config_file)).load_config()
+            cfg.merge(config)
+        except ConfigFileNotFound:
+            cfg = Config(config)
+        super().__init__(config=cfg, **kwargs)
