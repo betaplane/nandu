@@ -95,7 +95,10 @@ extension (e. g. \"image.png\"), or just the extension (e. g.
 \"png\"), in which case a random name is created also. The
 :results header of the src block is handed over to
 `org-babel-insert-result'. An optional :style header can give the
-name of a style with which to print the figure to hardcopy."
+name of a style with which to print the figure to hardcopy.
+A further optional :width header inserts an #+ATTR_ORG: :width
+directive before the image, thus controlling the display inside
+an orgmode file."
 
   (interactive)
   (let* ((babel-args '((:session . nil)))
@@ -134,7 +137,9 @@ name of a style with which to print the figure to hardcopy."
 
     (when-let ((results (alist-get :results info)))
       (setq result-params (cl-union (split-string results) result-params)))
-    (org-babel-insert-result (format "[[file:%s]]" path) result-params)
+    (if-let ((width (alist-get :width info)))
+        (org-babel-insert-result (format "#+ATTR_ORG: :width %d\n[[file:%s]]" width path) result-params)
+      (org-babel-insert-result (format "[[file:%s]]" path) result-params))
     (org-display-inline-images)))
 
 

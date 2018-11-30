@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: latex-center
+# key: xc
+# --
+\begin{center}
+`yas-selected-text`$0
+\end{center}
+
