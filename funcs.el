@@ -344,8 +344,7 @@ Supposed behavior: 1) on results paragraph
 (defun nandu--make-file-name (savefig)
   (let ((path nil)
         (ext "png")
-        (res-dir (file-name-as-directory
-                  (concat ob-ipython-resources-dir (file-name-sans-extension (buffer-name))))))
+        (res-dir (res_dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir))))
     (when (not (file-directory-p res-dir))
       (make-directory res-dir t))
     (catch :im_format
@@ -383,13 +382,6 @@ Supposed behavior: 1) on results paragraph
           (error nil))))
     nil))
 
-(defun nandu--append-figure (info path)
-  (let ((params (split-string (alist-get :results info))))
-    (if-let ((width (alist-get :width info)))
-        (org-babel-insert-result (format "#+ATTR_ORG: :width %d\n[[file:%s]]" width path) params)
-             (org-babel-insert-result (format "[[file:%s]]" path) params)))
-  (org-display-inline-images))
-
 (defun nandu-babel-execute:ipython (func body params)
   (let ((fig (lambda (style path)
                (let ((result nil))
@@ -407,17 +399,16 @@ Supposed behavior: 1) on results paragraph
                  result)))
         (style (alist-get :style params))
         (savefig (if-let ((savef (alist-get :savefig params))
-                          (res-dir (file-name-as-directory
-                                    (concat ob-ipython-resources-dir (file-name-sans-extension (buffer-name))))))
+                          (res-dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir)))
                      (concat res-dir savef)
                    nil)))
 
     (when style
       (setq style (or (car (directory-files nandu-styles-directory t style)) style)))
 
-    (let ((exports (alist-get :exports params))
+    (let ((exports (downcase (alist-get :exports params)))
           (existing-file (nandu--existing-results-file-name)))
-      (when (and (or (string-equal exports "results") (string-equal exports "both") (assoc :nandu params))
+      (when (and (or (string= exports "results") (string= exports "both") (assoc :nandu params))
                  (or existing-file savefig))
         (let ((exports-dir (file-name-as-directory
                             (concat "./obipy-exports/" (file-name-sans-extension (buffer-name)))))
@@ -595,19 +586,39 @@ The text, with expansion of the headline if applicable, will be inserted at the 
                 (insert text)
                 (insert "{% endraw %}{% endhighlight %}\n")
                 (insert "\n#+end_export\n"))))))))
+
   ;; when org-export-use-babel is nil, src-block header args are not parsed
+  ;; this deletes all src blocks, starting from the back (so that the parsed :begin elements remain correct)
   (when (or (org-export-derived-backend-p backend 'beamer)
             (org-export-derived-backend-p backend 'latex))
     (let ((src (org-element-map (org-element-parse-buffer 'element) 'src-block
-        (lambda (el)
-          (condition-case nil
-              (when-let* ((info (nth 2 (org-babel-get-src-block-info nil el)))
-                          (exp (downcase (alist-get :exports info)))
-                          (check (or (string= "none" exp) (string= "results" exp)))
-                          (beg (org-element-property :begin el))
-                          (end (org-element-property :end el)))
-                `(,beg . ,end))
-          (error nil))))))
+                 (lambda (el)
+                   (condition-case nil
+                       (when-let* ((info (nth 2 (org-babel-get-src-block-info nil el)))
+                                   (exp (downcase (alist-get :exports info)))
+                                   (check (or (string= "none" exp) (string= "results" exp)))
+                                   (beg (org-element-property :begin el))
+                                   (end (org-element-property :end el)))
+                         `(,beg . ,end))
+                     (error nil))))))
       (dolist (el (--sort (> (car it) (car other)) src))
         (delete-region (car el) (cdr el)))))
-    )
+
+  ;; this replaces images in the ./obipy-resources folder with .eps ones in ./obipy-exports
+  (when (org-export-derived-backend-p backend 'latex)
+    (let ((exports-dir (file-name-as-directory (concat "./obipy-exports/" (file-name-sans-extension (buffer-name))))))
+      (when (file-directory-p exports-dir)
+        (let ((links (org-element-map (org-element-parse-buffer) 'link
+                       (lambda (el)
+                         (when (string= 'file (org-element-property :type el))
+                           (let ((link-file (org-element-property :path el))
+                                 (beg (org-element-property :begin el))
+                                 (end (org-element-property :end el)))
+                             (list beg end link-file)))))))
+          (dolist (el (--sort (> (car it) (car other)) links))
+            (save-excursion
+              (message "replace file %s" (concat exports-dir (file-name-base (nth 2 el)) ".eps"))
+              (delete-region (car el) (nth 1 el))
+              (goto-char (car el))
+              (insert (format "[[file:%s]]" (concat exports-dir (file-name-base (nth 2 el)) ".eps"))))))))))
+
