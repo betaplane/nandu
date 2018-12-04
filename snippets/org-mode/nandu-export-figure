@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: nandu export figure
+# binding: C-s-<return>
+# type: command
+# --
+(nandu--export-figure)

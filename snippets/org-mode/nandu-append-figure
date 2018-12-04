@@ -3,4 +3,4 @@
 # binding: s-<return>
 # type: command
 # --
-(nandu-append-figure)
+(nandu-append-figure-manually)

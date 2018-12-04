@@ -24,6 +24,7 @@
   ;; (font-lock-add-keywords 'org-mode '(nandu-display-func-src))
   (setq org-fontify-quote-and-verse-blocks t)
   (setq org-export-use-babel nil) ;; don't execute src blocks when exporting org file
+  (advice-add 'org-babel-execute:ipython :around 'nandu-babel-execute:ipython)
   )
 
 (with-eval-after-load 'company
@@ -40,7 +41,7 @@
 ;; (setq org-confirm-shell-link-function nil) ; doesn't seem to apply
 
 ;; display/update images in the buffer after I evaluate
-;; (add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
+(add-hook 'org-babel-after-execute-hook 'org-display-inline-images 'append)
 
 (add-hook 'org-mode-hook 'nandu-org-mode-hook)
 (add-hook 'org-export-before-processing-hook 'nandu-org-export-before-processing-hook)
