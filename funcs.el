@@ -395,14 +395,14 @@ Supposed behavior: 1) on results paragraph
                (let ((result nil))
                  (when style
                    (funcall func
-                            (format "nandu_style_rcParams = plt.rcParams.copy()\nplt.style.use('%s')\n" style)
+                            (format "nandu_ctxt=plt.style.context('%s'); nandu_ctxt.__enter__()" style)
                             params))
                  (when body
                    (setq result (funcall func body params)))
                  (when path
                    (funcall func (format "plt.gcf().savefig('%s', bbox_inches='tight'); plt.close()" path) params))
                  (when style
-                   (funcall func "\nplt.rcParams = nandu_style_rcParams\ndel nandu_style_rcParams\n" params))
+                   (funcall func "nandu_ctxt.__exit__(None, None, None); del nandu_ctxt" params))
                  (message "src-block executed with arguments %s %s" style path)
                  result)))
         (style (alist-get :style params))
