@@ -3,4 +3,4 @@
 # binding: C-s-<return>
 # type: command
 # --
-(nandu--export-figure)
+(nandu-export-figure)

@@ -152,7 +152,7 @@ an orgmode file."
 ;; possibly with org-babel-merge-params
 
 
-;; FUNCTIONS (FOR KEY BINDINGS / SNIPPETS)
+;; "PUBLIC" FUNCTIONS (FOR KEY BINDINGS / SNIPPETS)
 ;; =======================================
 
 (defun nandu-shift-return (&optional ctrl-c language)
@@ -201,7 +201,6 @@ Variable of interest: `nandu-post-result-lines' has the number of empty lines to
         (yas-expand-snippet
          (format "#+begin_src %s :results raw :session\n$0\n#+end_src\n" language))
     (yas-expand-snippet (yas-lookup-snippet "org-babel source block")))))
-
 
 (defun nandu-babel-delete ()
   "\
@@ -264,6 +263,146 @@ Supposed behavior: 1) on results paragraph
         (forward-line 1)
         ))))
 
+;; "PRIVATE" FUNCTIONS (USED INTERNALLY)
+;; =====================================
+
+(defun nandu--make-file-name (savefig)
+  (let ((path nil)
+        (ext "png")
+        (res-dir (res_dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir))))
+    (when (not (file-directory-p res-dir))
+      (make-directory res-dir t))
+    (catch :im_format
+      (when savefig
+        (setq ext (split-string savefig "\\."))
+        (if (cdr ext)
+            (progn
+              (setq path (concat res-dir savefig))
+              (throw :im_format t))
+          (setq ext (car ext))))
+      (setq path (concat (make-temp-name res-dir) "." ext)))
+    (org-babel-insert-header-arg "savefig" (file-name-nondirectory savefig))
+    path))
+
+(defun nandu-append-figure-manually ()
+  "\
+Print a figure created in a src-block to a file and append a file link as #+RESULTS line.
+
+The files are saved in ob-ipython-resources-dir/<buffer-name-sans-extension>. The optional :savefig directive can either contain a file name *with* extension (which will be used), or just the extension (e.g. `png') to create a random file name. If no :savefig is give, a random file name with the default extension (`png') is created."
+
+  (interactive)
+  (let* ((info (nth 2 (org-babel-get-src-block-info)))
+        (path (nandu--make-file-name (alist-get :savefig info)))
+        (savefig (file-name-nondirectory path))
+        (result-params (split-string (alist-get :results info))))
+    (org-babel-execute:ipython nil (append info `((:savefig .,savefig))))
+    (org-babel-insert-result (format "[[%s]]" path) result-params)
+    (org-display-inline-images)))
+
+(defun nandu-export-figure ()
+  "\
+Execute a src-block containing matplotlib instructions and save an .eps file with standard (`plt.style.use(\'default\')') styling.
+"
+
+  (interactive)
+  (let* ((info (org-babel-get-src-block-info))
+         (body (nth 1 info))
+         (params (nth 2 info)))
+    (org-babel-execute:ipython body (append params '((:nandu))))))
+
+(defun nandu--existing-results-file-name ()
+  (if-let ((beg (org-babel-where-is-src-block-result)))
+    (save-excursion
+      (goto-char beg)
+      (let* ((el (org-element-at-point))
+             (end (org-element-property :end el)))
+        (condition-case nil
+            (progn 
+              (re-search-forward "\\[\\[file:\\(.*?\\)\]\]" end)
+              (file-name-nondirectory (match-string-no-properties 1)))
+          (error nil))))
+    nil))
+
+
+;; ADVICE
+;; ======
+
+;; this function gets advised :before org-display-image-remove-overlay, which is called by
+;; modification-hooks for the image overlay
+;; it causes image files to be deleted if the image overlay is removed
+(defun nandu-display-image-remove-overlay (ov after _beg _end &optional _len)
+  (let ((inhibit-modification-hooks t))
+    (when (and ov after)
+      (let* ((im (overlay-get ov 'display))
+             (file (file-name-sans-extension (image-property im :file))))
+        (dolist (f (file-expand-wildcards (concat file "*")))
+          (delete-file f t)
+          (message "File %s deleted [nandu-babel]" f)))
+        )))
+
+;; advice-after ob-ipython--create-process
+(defun nandu-create-process (name cmd)
+  (message "NANDU create-process name %s, cmd %s" name cmd)
+  (nandu-run-ipython-startup))
+
+;; org-babel-execute:ipython
+(defun nandu-babel-execute:ipython (func body params)
+  "\
+Advice around org-babel-execute:ipython to deal with 1) figure export and 2) figure styling. See also \[nandu-append-figure-manually] and \[nandu-export-figure].
+
+Supposed behavior: 1) If there is no :savefig directive in the header:
+                      Just execute the src-block. If the src-block produces a figure, it can be appended afterwards with \[nandu-append-figure-manually].
+                   2) If there is a :savefig directive:
+                      Execute the src-block, automatically save the figure which is created by the code, and append the figure as file link in a #+RESULTS directive.
+                   3) If, in addition to :savefig, :exports is specified as either `results' or `both':
+                      The code block is evaluated first with a standard styling to produce an .eps figure in ./obipy-exports/<buffer-name-sans-extension>/ and second with either the currently active styling or the one given by the :style header, to produce a figure in ./obipy-resources/<bufer-name-sans-extension>/. Without a :savefig header, an :exports directive has no effect as far as this function is concerned, unless a #+RESULTS: paragraph is already appended and contains a file link to an existing file (in which case the base file name is used to produce the .eps file in ./obipy-exports).
+
+An optional :style header refers to a matplotlib style sheet file and will be applied to any src-block. In addition to regular matplotlib locations, style sheets will be looked for in `nandu-styles-directory'.
+
+The :savefig header can either be a filename with extension (default file format is .png), or just the extension without dot (e.g. `png'), in which case a filename is created at random but the extension is set to the one given.
+
+One possible usage scenario without the :savefig directive is:
+1) Execute src-block that produces a figure.
+2) Execute \[nandu-append-figure-manually], which will create an arbitrary file name and insert a :savefig directive (if several are inserted, only the last one is in effect).
+3) If desired, execute \[nandu-export-figure], which will create an .eps file with standard styling in ./obipy-exports, of the same base file name as the one produced in step 2)."
+
+  (let ((fig (lambda (style path)
+               (let ((result nil))
+                 (when style
+                   (funcall func
+                            (format "nandu_ctxt=plt.style.context('%s'); nandu_ctxt.__enter__()" style)
+                            params))
+                 (when body
+                   (setq result (funcall func body params)))
+                 (when path
+                   (funcall func (format "plt.gcf().savefig('%s', bbox_inches='tight'); plt.close()" path) params))
+                 (when style
+                   (funcall func "nandu_ctxt.__exit__(None, None, None); del nandu_ctxt" params))
+                 (message "src-block executed with arguments %s %s" style path)
+                 result)))
+        (style (alist-get :style params))
+        (savefig (if-let ((savef (alist-get :savefig params)))
+                     (nandu--make-file-name savef)
+                   nil)))
+
+    (when style
+      (setq style (or (car (directory-files nandu-styles-directory t style)) style)))
+
+    (let ((exports (downcase (alist-get :exports params)))
+          (existing-file (nandu--existing-results-file-name)))
+      (when (and (or (string= exports "results") (string= exports "both") (assoc :nandu params))
+                 (or existing-file savefig))
+        (let ((exports-dir (file-name-as-directory
+                            (concat "./obipy-exports/" (file-name-sans-extension (buffer-name)))))
+              (file_name (or existing-file (file-name-nondirectory savefig))))
+          (when (not (file-directory-p exports-dir))
+            (make-directory exports-dir t))
+          (let ((path (concat exports-dir (file-name-sans-extension file_name) ".eps")))
+            (funcall fig "default" path))))
+
+      (when (not (assoc :nandu params))
+        (let ((result (funcall fig style savefig)))
+          (or (and savefig (format "[[%s]]" savefig)) result))))))
 
 ;; FONT LOCK MODE
 ;; ==============
@@ -319,115 +458,6 @@ Supposed behavior: 1) on results paragraph
         (kill-buffer-if-not-modified))
       (put-text-property beg end 'display (format "#+BEGIN_EXAMPLE\n%s\n#+END_EXAMPLE" ovtext)))))
 
-
-;; ADVICE
-;; ======
-
-;; this function gets advised :before org-display-image-remove-overlay, which is called by
-;; modification-hooks for the image overlay
-;; it causes image files to be deleted if the image overlay is removed
-(defun nandu-display-image-remove-overlay (ov after _beg _end &optional _len)
-  (let ((inhibit-modification-hooks t))
-    (when (and ov after)
-      (let* ((im (overlay-get ov 'display))
-             (file (file-name-sans-extension (image-property im :file))))
-        (dolist (f (file-expand-wildcards (concat file "*")))
-          (delete-file f t)
-          (message "File %s deleted [nandu-babel]" f)))
-        )))
-
-;; advice-after ob-ipython--create-process
-(defun nandu-create-process (name cmd)
-  (message "NANDU create-process name %s, cmd %s" name cmd)
-  (nandu-run-ipython-startup))
-
-(defun nandu--make-file-name (savefig)
-  (let ((path nil)
-        (ext "png")
-        (res-dir (res_dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir))))
-    (when (not (file-directory-p res-dir))
-      (make-directory res-dir t))
-    (catch :im_format
-      (when savefig
-        (setq ext (split-string savefig "\\."))
-        (if (cdr ext)
-            (progn
-              (setq path (concat res-dir savefig))
-              (throw :im_format t))
-          (setq ext (car ext))))
-      (setq path (concat (make-temp-name res-dir) "." ext)))
-    path))
-
-(defun nandu-append-figure-manually ()
-  (interactive)
-  (let* ((info (nth 2 (org-babel-get-src-block-info)))
-        (path (nandu--make-file-name nil))
-        (savefig (file-name-nondirectory path))
-        (result-params (split-string (alist-get :results info))))
-    (org-babel-insert-header-arg "savefig" savefig)
-    (org-babel-execute:ipython nil (append info `((:savefig .,savefig))))
-    (org-babel-insert-result (format "[[%s]]" path) result-params)
-    (org-display-inline-images)))
-
-(defun nandu--existing-results-file-name ()
-  (if-let ((beg (org-babel-where-is-src-block-result)))
-    (save-excursion
-      (goto-char beg)
-      (let* ((el (org-element-at-point))
-             (end (org-element-property :end el)))
-        (condition-case nil
-            (progn 
-              (re-search-forward "\\[\\[file:\\(.*?\\)\]\]" end)
-              (file-name-nondirectory (match-string-no-properties 1)))
-          (error nil))))
-    nil))
-
-(defun nandu-babel-execute:ipython (func body params)
-  (let ((fig (lambda (style path)
-               (let ((result nil))
-                 (when style
-                   (funcall func
-                            (format "nandu_ctxt=plt.style.context('%s'); nandu_ctxt.__enter__()" style)
-                            params))
-                 (when body
-                   (setq result (funcall func body params)))
-                 (when path
-                   (funcall func (format "plt.gcf().savefig('%s', bbox_inches='tight'); plt.close()" path) params))
-                 (when style
-                   (funcall func "nandu_ctxt.__exit__(None, None, None); del nandu_ctxt" params))
-                 (message "src-block executed with arguments %s %s" style path)
-                 result)))
-        (style (alist-get :style params))
-        (savefig (if-let ((savef (alist-get :savefig params))
-                          (res-dir (expand-file-name (file-name-sans-extension (buffer-name)) ob-ipython-resources-dir)))
-                     (concat res-dir savef)
-                   nil)))
-
-    (when style
-      (setq style (or (car (directory-files nandu-styles-directory t style)) style)))
-
-    (let ((exports (downcase (alist-get :exports params)))
-          (existing-file (nandu--existing-results-file-name)))
-      (when (and (or (string= exports "results") (string= exports "both") (assoc :nandu params))
-                 (or existing-file savefig))
-        (let ((exports-dir (file-name-as-directory
-                            (concat "./obipy-exports/" (file-name-sans-extension (buffer-name)))))
-              (file_name (or existing-file (file-name-nondirectory savefig))))
-          (when (not (file-directory-p exports-dir))
-            (make-directory exports-dir t))
-          (let ((path (concat exports-dir (file-name-sans-extension file_name) ".eps")))
-            (funcall fig "default" path))))
-
-      (when (not (assoc :nandu params))
-        (let ((result (funcall fig style savefig)))
-          (or (and savefig (format "[[%s]]" savefig)) result))))))
-
-(defun nandu--export-figure ()
-  (interactive)
-  (let* ((info (org-babel-get-src-block-info))
-         (body (nth 1 info))
-         (params (nth 2 info)))
-    (org-babel-execute:ipython body (append params '((:nandu))))))
 
 ;; HOOKS
 ;; =====
@@ -561,6 +591,8 @@ The text, with expansion of the headline if applicable, will be inserted at the 
       (insert "---\n")
       (write-file (expand-file-name (format "%s-%s.html" time fname) jekyll-dir)))))
 
+;; All Exports (including html for Jekyll)
+;; =======================================
 (defun nandu-org-export-before-processing-hook (backend)
   ;; pre-processes a #+DEFUN keyword by looking for the function and replacing the line in the buffer
   (when (org-export-derived-backend-p backend 'html)
