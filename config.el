@@ -25,6 +25,10 @@
   (setq org-fontify-quote-and-verse-blocks t)
   (setq org-export-use-babel nil) ;; don't execute src blocks when exporting org file
   (advice-add 'org-babel-execute:ipython :around 'nandu-babel-execute:ipython)
+  (advice-add 'ob-ipython--get-python :override 'nandu--get-python)
+  (advice-add 'ob-ipython--process-response :override 'nandu--process-response)
+  (advice-add 'ob-ipython--render :override 'nandu--render)
+  (advice-add 'ob-ipython--create-process :after 'nandu-create-ipython-process)
   )
 
 (with-eval-after-load 'company
