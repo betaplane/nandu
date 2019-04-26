@@ -14,6 +14,7 @@
         '(org-agenda-files "linux.org" "betaplane.org")))
   (setq org-refile-use-outline-path 'file)
   (setq org-preview-latex-default-process 'dvisvgm)
+  (setq org-startup-with-latex-preview t)
   (org-babel-do-load-languages 'org-babel-load-languages '((ipython . t)))
   ;;  (setq org-todo-keywords '((sequence "TODO" "|" "DONE")))
   (evil-define-key 'normal org-mode-map
@@ -26,8 +27,10 @@
   (setq org-export-use-babel nil) ;; don't execute src blocks when exporting org file
   ;; </org-ref
   ;; https://github.com/jkitchin/org-ref#configuration
+  ;; manual: https://github.com/jkitchin/org-ref/blob/master/org-ref.org
+  ;; https://www.reddit.com/r/emacs/comments/8wr0e0/alternative_to_orgref/
   (setq org-ref-default-bibliography '("~/Dropbox/work/zotero_all.bib"))
-  (setq org-ref-cite-completion-function 'org-ref-ivy-cite-completion)
+  (setq org-ref-cite-completion-library 'org-ref-ivy-cite)
   (setq org-latex-pdf-process (list "latexmk -shell-escape -bibtex -pdf -f -outdir=%o %f"))
   ;; org-ref/>
   (advice-add 'org-babel-execute:ipython :around 'nandu-babel-execute:ipython)

@@ -1,0 +1,10 @@
+# -*- mode: snippet -*-
+# name: org-babel figure block
+# binding: <S-s-return>
+# condition: (not (org-at-table-p))
+# type: snippet
+# --
+#+begin_src ipython :results "raw" :session
+fig, ax = plt.subplots(figsize=(8, 6))
+$0
+#+end_src

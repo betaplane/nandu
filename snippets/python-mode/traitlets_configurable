@@ -1,0 +1,17 @@
+# -*- mode: snippet -*-
+# name: Configurable
+# key: <conf
+# --
+import os
+from traitlets.config import Configurable, Config
+from traitlets.config.loader import PyFileConfigLoader, ConfigFileNotFound
+from traitlets import Unicode
+
+class $0(Configurable):
+    config_file = Unicode('~/Dropbox/work/config.py').tag(config=True)
+    def __init__(self, *args, **kwargs):
+        try:
+            cfg = PyFileConfigLoader(os.path.expanduser(self.config_file)).load_config()
+            super().__init__(config=cfg, **kwargs)
+        except ConfigFileNotFound:
+            super().__init__(**kwargs)
