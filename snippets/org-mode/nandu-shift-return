@@ -1,6 +1,6 @@
 # -*- mode: snippet -*-
 # name: nandu shift return
-# binding: S-<return>
+# binding: <S-return>
 # condition: (not (org-at-table-p))
 # type: command
 # --

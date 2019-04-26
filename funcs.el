@@ -220,7 +220,7 @@ Supposed behavior: 1) on results paragraph
   "\
 Print a figure created in a src-block to a file and append a file link as #+RESULTS line.
 
-The files are saved in ob-ipython-resources-dir/<buffer-name-sans-extension>. The optional :savefig directive can either contain a file name *with* extension (which will be used), or just the extension (e.g. `png') to create a random file name. If no :savefig is give, a random file name with the default extension (`png') is created."
+The files are saved in ob-ipython-resources-dir/<buffer-name-sans-extension>. The optional :savefig directive can either contain a file name *with* extension (which will be used), or just the extension (e.g. `png') to create a random file name. If no :savefig is given, a random file name with the default extension (`png') is created."
 
   (interactive)
   (let* ((info (nth 2 (org-babel-get-src-block-info)))
@@ -262,17 +262,18 @@ Execute a src-block containing matplotlib instructions and save an .eps file wit
 
 ;; https://www.gnu.org/software/emacs/manual/html_node/elisp/Advice-combinators.html
 
-;; this function gets advised :before org-display-image-remove-overlay, which is called by
-;; modification-hooks for the image overlay
-;; it causes image files to be deleted if the image overlay is removed
 (defun nandu-create-ipython-process (name cmd)
   (let ((info (nth 2 (org-babel-get-src-block-info)))
         (runpy (concat nandu-layer-directory "/nandu_ipython_startup.py"))
         (styles (concat nandu-styles-directory "/nandu_dark.mplstyle")))
     (org-babel-execute:ipython
      (format
-      "import runpy; runpy.run_path('%s', init_globals={'nandu_style_sheet':'%s'})" runpy styles) info)))
+      "import runpy; runpy.run_path('%s', init_globals={'nandu_style_sheet':'%s'})" runpy styles) info))
+  (message "ipython startup run"))
 
+;; this function gets advised :before org-display-image-remove-overlay, which is called by
+;; modification-hooks for the image overlay
+;; it causes image files to be deleted if the image overlay is removed
 (defun nandu-display-image-remove-overlay (ov after _beg _end &optional _len)
   (let ((inhibit-modification-hooks t))
     (when (and ov after)

@@ -24,6 +24,12 @@
   ;; (font-lock-add-keywords 'org-mode '(nandu-display-func-src))
   (setq org-fontify-quote-and-verse-blocks t)
   (setq org-export-use-babel nil) ;; don't execute src blocks when exporting org file
+  ;; </org-ref
+  ;; https://github.com/jkitchin/org-ref#configuration
+  (setq org-ref-default-bibliography '("~/Dropbox/work/zotero_all.bib"))
+  (setq org-ref-cite-completion-function 'org-ref-ivy-cite-completion)
+  (setq org-latex-pdf-process (list "latexmk -shell-escape -bibtex -pdf -f -outdir=%o %f"))
+  ;; org-ref/>
   (advice-add 'org-babel-execute:ipython :around 'nandu-babel-execute:ipython)
   (advice-add 'ob-ipython--get-python :override 'nandu--get-python)
   (advice-add 'ob-ipython--process-response :override 'nandu--process-response)
@@ -37,6 +43,7 @@
 
 ;; for use with elpy
 (setq python-shell-interpreter "jupyter-console")
+(setq python-shell-interpreter-interactive-arg "")
 
 ;; don't prompt me to confirm everytime I want to evaluate a block
 ;; this is a possible security risk if I open an org-mode file from someone else
