@@ -487,6 +487,8 @@ One possible usage scenario without the :savefig directive is:
   ;;                     (file-name-base (buffer-file-name)) (concat encl res_dir)))))
   ;;   (error (message "error [nandu-org-mode-hook]: %s" (error-message-string err))))
   (add-hook 'after-save-hook 'nandu-babel-after-save t t)
+  (with-eval-after-load 'company
+	  (add-to-list 'company-backends 'company-ob-ipython))
   (message "NANDU org mode hook"))
 
 ;; I don't manage to make it work when I prepend (add-to-list) the 'keyword' function

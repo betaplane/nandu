@@ -40,10 +40,6 @@
   (advice-add 'ob-ipython--create-process :after 'nandu-create-ipython-process)
   )
 
-(with-eval-after-load 'company
-	(add-to-list 'company-backends 'company-ob-ipython)
-  )
-
 ;; for use with elpy
 (setq python-shell-interpreter "jupyter-console")
 (setq python-shell-interpreter-interactive-arg "")
