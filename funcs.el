@@ -1,17 +1,20 @@
 (defun switch-pyvenv (env)
   (interactive "spyvenv: ")
   (let ((lenv (split-string env)))
-    (if (equal (car lenv) "conda")
+    (if (equal (car lenv) "pyvenv")
         (let ((env (pop (cdr lenv))))
-          (pyvenv-activate (expand-file-name env conda-envs-directory))
+          (pyvenv-activate (expand-file-name env non-conda-envs-directory))
           (setq python-shell-interpreter-args
-                      (concat "--simple-prompt --kernel " env))
+                (concat "--kernel " env))
           )
       (progn
-        (pyvenv-activate (expand-file-name env non-conda-envs-directory))
+        (pyvenv-activate (expand-file-name env conda-envs-directory))
         (setq python-shell-interpreter-args
-                    (concat "--kernel " env))
+              (concat "--simple-prompt --kernel " env))
         )))
+  (condition-case nil
+             (setenv "PYTHONPATH" nandu-pythonpath)
+             (error nil))
   )
 
 ;; https://github.com/gregsexton/ob-ipython
@@ -250,7 +253,7 @@ Execute a src-block containing matplotlib instructions and save an .eps file wit
       (let* ((el (org-element-at-point))
              (end (org-element-property :end el)))
         (condition-case nil
-            (progn 
+            (progn
               (re-search-forward "\\[\\[file:\\(.*?\\)\]\]" end)
               (file-name-nondirectory (match-string-no-properties 1)))
           (error nil))))
@@ -484,7 +487,7 @@ One possible usage scenario without the :savefig directive is:
   ;;                     (file-name-base (buffer-file-name)) (concat encl res_dir)))))
   ;;   (error (message "error [nandu-org-mode-hook]: %s" (error-message-string err))))
   (add-hook 'after-save-hook 'nandu-babel-after-save t t)
-  (message "NANDO org mode hook"))
+  (message "NANDU org mode hook"))
 
 ;; I don't manage to make it work when I prepend (add-to-list) the 'keyword' function
 (defun nandu-font-lock-set-keywords-hook ()
@@ -498,6 +501,7 @@ One possible usage scenario without the :savefig directive is:
 
 (defun nandu-after-init-hook ()
   (global-company-mode t)
+  (yas-global-mode t)
   (global-visual-line-mode t)
   ;; cursor color clashes with farmhouse theme
   ;; gets reset if set earlier in the loading process
@@ -507,8 +511,9 @@ One possible usage scenario without the :savefig directive is:
   ;; before inserting into the list
   (add-to-list 'yas-snippet-dirs (expand-file-name "snippets" (file-name-directory (symbol-file 'nandu-org-mode-hook))))
   (add-to-list 'yas-snippet-dirs (expand-file-name "snippets" (file-name-directory (locate-library "elpy"))))
-  ;; needs to be enabled *after* adding to yas-snippet-dirs
-  (yas-global-mode t))
+  ;; somehow, yas-snippet-dirs is void if yas isn't enabled yet, but if done before adding dirs,
+  ;; they have to be reloaded
+  (yas-reload-all))
 
 ;; possibly to parse header arguments and hand to python by expanding the source
 ;; this will be necessary to have a possible change to the resources_dir if multiple different org files share the same kernel
@@ -519,7 +524,6 @@ One possible usage scenario without the :savefig directive is:
              (var (format "buffer_file_name = '%s'\n" (buffer-file-name))))
         (when (not (string-match-p var body))
           (org-babel-update-block-body (concat var body)))))))
-
 
 ;; Org-mode functions
 ;; ==================

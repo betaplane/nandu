@@ -59,5 +59,5 @@
 
 (add-hook 'org-mode-hook 'nandu-org-mode-hook)
 (add-hook 'org-export-before-processing-hook 'nandu-org-export-before-processing-hook)
-(add-hook 'org-font-lock-set-keywords-hook 'nandu-font-lock-set-keywords-hook)
+;; (add-hook 'org-font-lock-set-keywords-hook 'nandu-font-lock-set-keywords-hook)
 (add-hook 'after-init-hook 'nandu-after-init-hook)
